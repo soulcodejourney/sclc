@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCLC : Code of the Day</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --primary-color: #333;
+            --border-color: #ccc;
+            --header-bg: #e0e0e0;
+            --highlight-green-bg: #d4edda;
+            --highlight-green-text: #155724;
+            --highlight-red-bg: #f8d7da;
+            --highlight-red-text: #721c24;
+            --btn-active-blue: #007bff;
+            --btn-inactive-grey: #6c757d;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 14px; 
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin: 10px 0;
+            font-size: 1.5em;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+            padding: 8px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        select, button, input {
+            padding: 5px 10px;
+            font-size: 13px;
+        }
+
+        button {
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            transition: background-color 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+        .mode-btn { background-color: var(--btn-inactive-grey); }
+        .mode-btn.active { background-color: var(--btn-active-blue) !important; }
+
+        /* --- Calendar Container Grid System --- */
+        #calendarContainer {
+            width: 100%;
+            display: grid;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        /* View 1: Single Column */
+        #calendarContainer.view-1 {
+            max-width: 450px;
+            grid-template-columns: 1fr;
+        }
+
+        /* View 3: 1x3 Horizontal */
+        #calendarContainer.view-3 {
+            max-width: 98%;
+            grid-template-columns: repeat(3, 1fr);
+            font-size: 0.75em;
+        }
+        
+        /* View 12: 4x3 Grid */
+        #calendarContainer.view-12 {
+            max-width: 98%;
+            grid-template-columns: repeat(4, 1fr);
+            font-size: 0.55em;
+        }
+
+        /* --- Calendar Card Styles --- */
+        .month-wrapper {
+            background: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .month-title {
+            background-color: #333;
+            color: white;
+            padding: 5px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            table-layout: fixed;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            vertical-align: middle;
+            padding: 1px;
+        }
+
+        th {
+            background-color: var(--header-bg);
+            font-weight: bold;
+            height: auto;
+            font-size: 0.9em;
+        }
+
+        .day-number {
+            font-weight: bold;
+            display: block;
+        }
+
+        .code-result {
+            font-family: monospace;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.5);
+            display: inline-block;
+        }
+
+        /* --- Dynamic Sizing based on Parent Class --- */
+        
+        /* Normal (View 1) */
+        .view-1 td { height: 45px; padding: 2px; }
+        .view-1 .day-number { font-size: 1em; margin-bottom: 2px; }
+        .view-1 .code-result { font-size: 0.9em; padding: 2px 4px; }
+
+        /* Medium (View 3) */
+        .view-3 td { height: 35px; }
+        .view-3 .day-number { font-size: 1.1em; }
+        .view-3 .code-result { font-size: 1em; }
+        .view-3 th { padding: 2px; }
+
+        /* Mini (View 12) */
+        .view-12 td { height: 25px; }
+        .view-12 .day-number { font-size: 1.2em; display: inline; margin-right: 2px; }
+        .view-12 .code-result { font-size: 1em; display: inline; }
+        .view-12 .month-title { font-size: 1.4em; padding: 2px; }
+        .view-12 th { font-size: 1em; padding: 1px; }
+
+        .empty { background-color: #f9f9f9; }
+
+        /* Highlighting */
+        td.highlight-green { background-color: var(--highlight-green-bg); color: var(--highlight-green-text); }
+        td.highlight-red { background-color: var(--highlight-red-bg); color: var(--highlight-red-text); }
+    </style>
+</head>
+<body>
+
+    <h1>SCLC : Code of the Day</h1>
+
+    <div class="controls">
+        <select id="monthSelect">
+            <option value="0" selected>January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+        </select>
+        <input type="number" id="yearInput" value="2026" min="1900" max="2100" style="width: 50px;">
+        
+        <button id="btn1" class="mode-btn" onclick="generateSingleMonth()">1 Month</button>
+        <button id="btn3" class="mode-btn" onclick="generateThreeMonths()">3 Months (1x3)</button>
+        <button id="btn12" class="mode-btn" onclick="generateWholeYear()">Whole Year (4x3)</button>
+    </div>
+
+    <div id="calendarContainer" class="view-1"></div>
+
+    <script>
+        // --- UI Helper: Toggle Button Colors ---
+        function setActiveButton(activeId) {
+            const buttons = document.querySelectorAll('.mode-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(activeId);
+            if(activeBtn) activeBtn.classList.add('active');
+        }
+
+        // --- Math Helpers ---
+        function reduceNumber(num) {
+            while (num >= 10) {
+                let sum = 0;
+                let digits = num.toString().split('');
+                for (let digit of digits) sum += parseInt(digit);
+                num = sum;
+            }
+            return num;
+        }
+
+        function sumDigits(num) {
+            let sum = 0;
+            let digits = num.toString().split('');
+            for (let digit of digits) sum += parseInt(digit);
+            return sum;
+        }
+
+        const monthNames = ["January", "February", "March", "April", "May", "June", 
+                          "July", "August", "September", "October", "November", "December"];
+
+        // --- Generation Functions ---
+
+        function generateSingleMonth() {
+            setActiveButton('btn1');
+            const container = document.getElementById('calendarContainer');
+            container.className = 'view-1';
+            container.innerHTML = ''; 
+            
+            const monthIndex = parseInt(document.getElementById('monthSelect').value);
+            const year = parseInt(document.getElementById('yearInput').value);
+
+            container.appendChild(buildMonthTable(year, monthIndex));
+        }
+
+        function generateThreeMonths() {
+            setActiveButton('btn3');
+            const container = document.getElementById('calendarContainer');
+            container.className = 'view-3';
+            container.innerHTML = '';
+            
+            const startMonthIndex = parseInt(document.getElementById('monthSelect').value);
+            const startYear = parseInt(document.getElementById('yearInput').value);
+
+            for (let i = 0; i < 3; i++) {
+                let d = new Date(startYear, startMonthIndex + i, 1);
+                container.appendChild(buildMonthTable(d.getFullYear(), d.getMonth()));
+            }
+        }
+
+        function generateWholeYear() {
+            setActiveButton('btn12');
+            const container = document.getElementById('calendarContainer');
+            container.className = 'view-12';
+            container.innerHTML = '';
+            
+            const year = parseInt(document.getElementById('yearInput').value);
+
+            for (let i = 0; i < 12; i++) {
+                container.appendChild(buildMonthTable(year, i));
+            }
+        }
+
+        // --- Table Builder ---
+
+        function buildMonthTable(year, monthIndex) {
+            const yearSum = sumDigits(year);
+            const actualMonth = monthIndex + 1;
+            const monthSum = sumDigits(actualMonth);
+            const initialNumber = yearSum + monthSum;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'month-wrapper';
+
+            const title = document.createElement('div');
+            title.className = 'month-title';
+            title.textContent = `${monthNames[monthIndex]} ${year}`;
+            wrapper.appendChild(title);
+
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            thead.innerHTML = `<tr><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th><th>S</th></tr>`;
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            
+            const firstDayDate = new Date(year, monthIndex, 1);
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+            
+            let startDay = firstDayDate.getDay(); 
+            let monStartDay = (startDay === 0) ? 6 : startDay - 1;
+
+            let currentDay = 1;
+            let row = document.createElement('tr');
+
+            for (let i = 0; i < monStartDay; i++) {
+                let cell = document.createElement('td');
+                cell.className = 'empty';
+                row.appendChild(cell);
+            }
+
+            for (let i = monStartDay; i < 7; i++) {
+                if (currentDay > daysInMonth) break;
+                row.appendChild(createDayCell(currentDay, initialNumber));
+                currentDay++;
+            }
+            tbody.appendChild(row);
+
+            while (currentDay <= daysInMonth) {
+                row = document.createElement('tr');
+                for (let i = 0; i < 7; i++) {
+                    if (currentDay > daysInMonth) {
+                        let cell = document.createElement('td');
+                        cell.className = 'empty';
+                        row.appendChild(cell);
+                    } else {
+                        row.appendChild(createDayCell(currentDay, initialNumber));
+                        currentDay++;
+                    }
+                }
+                tbody.appendChild(row);
+            }
+
+            table.appendChild(tbody);
+            wrapper.appendChild(table);
+            return wrapper;
+        }
+
+        function createDayCell(day, initialNumber) {
+            let cell = document.createElement('td');
+            
+            let dayReduced = reduceNumber(day);
+            let total = initialNumber + dayReduced;
+            let finalReduced = reduceNumber(total);
+
+            // Highlight Logic
+            if ((total === 17 && finalReduced === 8) ||
+                (total === 22 && finalReduced === 4) ||
+                (total === 44 && finalReduced === 8) ||
+                (total === 19 && finalReduced === 1)) {
+                cell.classList.add('highlight-green');
+            }
+            else if ((total === 18 && finalReduced === 9) ||
+                     (total === 27 && finalReduced === 9) ||
+                     (total === 35 && finalReduced === 8)) {
+                cell.classList.add('highlight-red');
+            }
+
+            let displayText = `${total}/${finalReduced}`;
+            if (total === 19 && finalReduced === 1) {
+                displayText = "19/10/1";
+            }
+
+            cell.innerHTML = `<span class="day-number">${day}</span><br>
+                              <span class="code-result">${displayText}</span>`;
+            return cell;
+        }
+
+        // Initialize
+        window.onload = generateSingleMonth;
+    </script>
+</body>
+</html>

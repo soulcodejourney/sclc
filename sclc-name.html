@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soul Code Name</title>
+    <style>
+        :root {
+            --primary-bg: linear-gradient(90deg, #6a85e6 0%, #8558b8 100%);
+            --header-text: #fff;
+            --border-color: #333;
+            --bg-color: #f4f4f9;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+        }
+
+        /* Container for screen capture */
+        #app-container {
+            background-color: #fff;
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--primary-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .guest-mode {
+            background-color: rgba(255,255,255,0.25);
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+        }
+
+        /* MAIN CONTENT */
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* INPUT AREA */
+        .input-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 50px;
+            justify-content: space-between;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .input-group label {
+            font-weight: 700;
+            font-size: 16px;
+            white-space: nowrap;
+        }
+
+        .input-group input {
+            padding: 12px 15px;
+            font-size: 18px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: 220px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #6a5acd;
+            box-shadow: 0 0 0 3px rgba(106, 90, 205, 0.2);
+        }
+
+        /* DYNAMIC TABLES AREA */
+        .calculation-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 40px;
+            min-height: 100px;
+        }
+
+        .row-label {
+            font-weight: 700;
+            font-size: 16px;
+            width: 100px;
+            padding-top: 18px;
+            flex-shrink: 0;
+        }
+
+        .dynamic-table-wrapper {
+            flex-grow: 1;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin: 0;
+            background: #fff;
+            width: auto; 
+        }
+
+        td {
+            border: 1px solid var(--border-color);
+            padding: 15px 10px;
+            text-align: center;
+            font-size: 20px;
+            min-width: 40px;
+        }
+
+        .letters-row td {
+            font-weight: 400;
+            text-transform: uppercase;
+        }
+
+        .numbers-row td {
+            font-weight: 600;
+        }
+
+        /* RESULT BOX */
+        .result-card {
+            border: 1px solid var(--border-color);
+            background: #fff;
+            min-width: 160px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            height: 86px;
+        }
+
+        .result-title {
+            font-weight: 800;
+            font-size: 18px;
+            margin-bottom: 8px;
+            text-transform: capitalize;
+        }
+
+        .result-value {
+            font-size: 26px;
+            font-weight: 500;
+            color: #000;
+        }
+
+        /* BUTTONS SECTION (Bottom) */
+        .action-row {
+            margin-top: 60px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding-bottom: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 40px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .save-btn {
+            background: #6a5acd;
+            color: white;
+            box-shadow: 0 4px 10px rgba(106, 90, 205, 0.3);
+        }
+
+        .save-btn:hover {
+            background: #5848b8;
+            transform: translateY(-2px);
+        }
+
+        .reset-btn {
+            background: #fff;
+            color: #d9534f;
+            border: 2px solid #d9534f;
+        }
+
+        .reset-btn:hover {
+            background: #d9534f;
+            color: white;
+        }
+
+        /* Hide buttons during print/capture */
+        .hide-on-capture {
+            display: none !important;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <header>
+        <h1>Soul Code Name</h1>
+        <div class="guest-mode">Guest Mode</div>
+    </header>
+
+    <div class="container">
+        <div class="input-section">
+            <div class="input-group">
+                <label>First Name</label>
+                <input type="text" id="in-first" placeholder="e.g. John" oninput="app.update('first')">
+            </div>
+            <div class="input-group">
+                <label>Last Name</label>
+                <input type="text" id="in-last" placeholder="e.g. Doe" oninput="app.update('last')">
+            </div>
+            <div class="input-group">
+                <label>Any Name</label>
+                <input type="text" id="in-any" placeholder="e.g. WoW" oninput="app.update('any')">
+            </div>
+        </div>
+
+        <div class="calculation-row" id="row-first">
+            <div class="row-label">First Name</div>
+            <div class="dynamic-table-wrapper">
+                <table id="table-first"><tbody></tbody></table>
+            </div>
+            <div class="result-card">
+                <div class="result-title">Result</div>
+                <div class="result-value" id="res-first">0</div>
+            </div>
+        </div>
+
+        <div class="calculation-row" id="row-last">
+            <div class="row-label">Last Name</div>
+            <div class="dynamic-table-wrapper">
+                <table id="table-last"><tbody></tbody></table>
+            </div>
+            <div class="result-card">
+                <div class="result-title">Result</div>
+                <div class="result-value" id="res-last">0</div>
+            </div>
+        </div>
+
+        <div class="calculation-row" id="row-any">
+            <div class="row-label">Any Name</div>
+            <div class="dynamic-table-wrapper">
+                <table id="table-any"><tbody></tbody></table>
+            </div>
+            <div class="result-card">
+                <div class="result-title">Result</div>
+                <div class="result-value" id="res-any">0</div>
+            </div>
+        </div>
+
+        <div class="action-row" id="action-buttons">
+            <button class="btn reset-btn" onclick="app.reset()">
+                Reset
+            </button>
+            <button class="btn save-btn" onclick="saveAsImage()">
+                Download Result (PNG)
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<script>
+    const app = {
+        mapping: {
+            'A':1, 'J':1, 'I':1, 'Q':1, 'Y':1,
+            'B':2, 'K':2, 'R':2,
+            'G':3, 'L':3,
+            'D':4, 'M':4,
+            'H':5, 'N':5,
+            'S':6, 'U':6, 'V':6, 'W':6,
+            'O':7, 'X':7, 'E':7, 'Z':7,
+            'C':8, 'F':8, 'P':8,
+            'T':9
+        },
+
+        calculate: function(total) {
+            let current = total;
+            while (current > 9) {
+                current = String(current).split('').map(Number).reduce((a, b) => a + b, 0);
+            }
+            return current;
+        },
+
+        update: function(type) {
+            const inputId = `in-${type}`;
+            const tableId = `table-${type}`;
+            const resId = `res-${type}`;
+
+            const inputVal = document.getElementById(inputId).value.toUpperCase();
+            const tableBody = document.querySelector(`#${tableId} tbody`);
+            const resultEl = document.getElementById(resId);
+
+            tableBody.innerHTML = '';
+            
+            if (!inputVal) {
+                resultEl.innerText = "0";
+                return;
+            }
+
+            const trLetters = document.createElement('tr');
+            trLetters.className = 'letters-row';
+            const trNumbers = document.createElement('tr');
+            trNumbers.className = 'numbers-row';
+
+            let totalSum = 0;
+            let hasValidChar = false;
+
+            for (let char of inputVal) {
+                if (this.mapping[char] !== undefined) {
+                    hasValidChar = true;
+                    const val = this.mapping[char];
+
+                    const tdL = document.createElement('td');
+                    tdL.innerText = char;
+                    trLetters.appendChild(tdL);
+
+                    const tdN = document.createElement('td');
+                    tdN.innerText = val;
+                    trNumbers.appendChild(tdN);
+
+                    totalSum += val;
+                }
+            }
+
+            if (hasValidChar) {
+                tableBody.appendChild(trLetters);
+                tableBody.appendChild(trNumbers);
+            }
+
+            const reduced = this.calculate(totalSum);
+
+            if (totalSum === reduced) {
+                resultEl.innerText = `${totalSum}`;
+            } else {
+                resultEl.innerText = `${totalSum}/${reduced}`;
+            }
+        },
+
+        reset: function() {
+            document.getElementById('in-first').value = '';
+            document.getElementById('in-last').value = '';
+            document.getElementById('in-any').value = '';
+
+            this.update('first');
+            this.update('last');
+            this.update('any');
+        }
+    };
+
+    function saveAsImage() {
+        const actionRow = document.getElementById('action-buttons');
+        const element = document.getElementById('app-container');
+
+        actionRow.style.display = 'none';
+
+        html2canvas(element, {
+            scale: 2, 
+            backgroundColor: "#ffffff",
+            windowWidth: element.scrollWidth,
+            windowHeight: element.scrollHeight
+        }).then(canvas => {
+            actionRow.style.display = 'flex';
+            const link = document.createElement('a');
+            link.download = 'soul-code-result.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            console.error(err);
+            actionRow.style.display = 'flex';
+            alert("Error saving image.");
+        });
+    }
+
+    // Set Empty Values on Load
+    window.onload = function() {
+        document.getElementById('in-first').value = "";
+        document.getElementById('in-last').value = "";
+        document.getElementById('in-any').value = "";
+        
+        // This ensures the tables start empty and results show 0
+        app.update('first');
+        app.update('last');
+        app.update('any');
+    };
+</script>
+
+</body>
+</html>

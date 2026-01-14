@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCLC : 99 Years Code</title>
+    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript/lunar.js"></script>
+    <style>
+        :root {
+            /* Requested Colors */
+            --bg-upward: #90ee90;   /* Green */
+            --bg-downward: #ffb6c1; /* Red/Pink */
+            --bg-neutral: #6495ed;  /* Blue */
+            
+            --border-color: #ccc;
+            --text-color: #000;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #fff;
+            margin: 0;
+            padding: 10px;
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f4f4f4;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .controls label { display: block; font-weight: bold; margin-bottom: 3px; font-size: 0.85em; }
+        .controls input { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em;}
+        .controls button {
+            padding: 7px 15px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .controls button:hover { background-color: #555; }
+
+        /* Table Styling */
+        .cycle-block {
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed; /* Ensures symmetry */
+            font-size: 12px; 
+            border: 1px solid var(--border-color);
+        }
+
+        th, td {
+            text-align: center; 
+            padding: 4px 2px;
+            border: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        /* First Column (Row Labels) */
+        .row-label-cell {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+
+        /* Cycle Headers (Upward/Downward/Neutral) */
+        .header-upward { font-weight: bold; font-size: 0.9em; color: #333; background-color: #f0fdf0; }
+        .header-downward { font-weight: bold; font-size: 0.9em; color: #333; background-color: #fff0f0; }
+        .header-neutral { font-weight: bold; font-size: 0.9em; color: #333; background-color: #f0f6ff; }
+
+        /* Data Colors */
+        .col-upward { background-color: var(--bg-upward); }
+        .col-downward { background-color: var(--bg-downward); }
+        .col-neutral { background-color: var(--bg-neutral); }
+
+        .val-bold { font-weight: 700; }
+        
+        #outputArea { margin-top: 10px; }
+        h1 { font-size: 1.5em; margin: 10px 0; text-align: center; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>SCLC : 99 Years Code</h1>
+    <div class="controls">
+        <div>
+            <label>Date of Birth</label>
+            <input type="date" id="dobInput">
+        </div>
+        <button onclick="generateChart()">Generate</button>
+    </div>
+
+    <div id="outputArea"></div>
+</div>
+
+<script>
+    // --- 1. Math Helpers ---
+    function sumDigits(num) {
+        return num.toString().split('').reduce((sum, d) => sum + parseInt(d), 0);
+    }
+
+    function getReducedCode(initialSum) {
+        let history = [initialSum];
+        let current = initialSum;
+        while (current >= 10) {
+            current = sumDigits(current);
+            history.push(current);
+        }
+        return history.join('/');
+    }
+
+    // --- 2. Color Logic ---
+    function getColumnClass(index) {
+        if (index <= 3) return 'col-upward';   // 0-3
+        if (index <= 6) return 'col-downward'; // 4-6
+        return 'col-neutral';                  // 7-8
+    }
+
+    // --- 3. Generation Logic ---
+    function generateChart() {
+        const input = document.getElementById('dobInput').value;
+        if (!input) return alert("Please select a valid date.");
+
+        const output = document.getElementById('outputArea');
+        output.innerHTML = "";
+
+        const date = new Date(input);
+        const gDay = date.getDate();
+        const gMonth = date.getMonth() + 1;
+        const gYear = date.getFullYear();
+
+        // Base Calculations
+        const gregBaseSum = sumDigits(gDay) + sumDigits(gMonth);
+        const lunarObj = Solar.fromYmd(gYear, gMonth, gDay).getLunar();
+        const lunarBaseSum = sumDigits(lunarObj.getDay()) + sumDigits(lunarObj.getMonth());
+
+        // Loop from Age 0 to 99 in jumps of 9
+        for (let startAge = 0; startAge <= 98; startAge += 9) {
+            
+            // Start Table
+            let html = `<div class="cycle-block"><table>`;
+            
+            // Define columns: 1st is 70px fixed, rest are auto equal
+            html += `<colgroup>
+                        <col style="width: 70px;">
+                        <col span="9">
+                     </colgroup>`;
+
+            // --- HEADER ROW (Upward/Downward/Neutral) ---
+            let rowHeader = `<tr>
+                                <td class="row-label-cell"></td> <td colspan="4" class="header-upward">UPWARD</td>
+                                <td colspan="3" class="header-downward">DOWNWARD</td>
+                                <td colspan="2" class="header-neutral">NEUTRAL</td>
+                             </tr>`;
+            
+            // --- DATA ROWS ---
+            let rowAge = `<tr><td class="row-label-cell">Age</td>`;
+            let rowYear = `<tr><td class="row-label-cell">Year</td>`;
+            let rowHeart = `<tr><td class="row-label-cell">Heart</td>`;
+            let rowAction = `<tr><td class="row-label-cell">Action</td>`;
+
+            // Inner loop: 9 columns
+            for (let i = 0; i < 9; i++) {
+                const currentAge = startAge + i;
+                const currentYear = gYear + currentAge;
+                const colorClass = getColumnClass(i);
+
+                // Calculate Codes
+                const sumOfYear = sumDigits(currentYear);
+                const heartVal = getReducedCode(sumOfYear + gregBaseSum);
+                const actionVal = getReducedCode(sumOfYear + lunarBaseSum);
+
+                if (currentAge > 99) {
+                    rowAge += `<td class="${colorClass}"></td>`;
+                    rowYear += `<td class="${colorClass}"></td>`;
+                    rowHeart += `<td class="${colorClass}"></td>`;
+                    rowAction += `<td class="${colorClass}"></td>`;
+                } else {
+                    rowAge += `<td class="data-cell ${colorClass}">${currentAge}</td>`;
+                    rowYear += `<td class="data-cell ${colorClass}">${currentYear}</td>`;
+                    rowHeart += `<td class="data-cell ${colorClass} val-bold">${heartVal}</td>`;
+                    rowAction += `<td class="data-cell ${colorClass} val-bold">${actionVal}</td>`;
+                }
+            }
+
+            // Close rows
+            rowAge += "</tr>";
+            rowYear += "</tr>";
+            rowHeart += "</tr>";
+            rowAction += "</tr>";
+
+            // Combine all
+            html += rowHeader + rowAge + rowYear + rowHeart + rowAction + `</table></div>`;
+            output.innerHTML += html;
+        }
+    }
+</script>
+
+</body>
+</html>
