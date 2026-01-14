@@ -1,7 +1,7 @@
 Soul Code Calculator (SCLC)
 Soul Code Calculator is a web-based numerology application designed to calculate "Soul Code" and "Life Code" based on an individual's date of birth and birth time. It visualizes the data through matrices and prediction triangles, and calculates a specific "Lucky Number" using a unique algorithm.
 
-=============
+
 Features
 =============
 Dual Calendar Calculation: Calculates data based on both Solar (Soul Code) and Lunar (Life Code) calendars.
@@ -37,7 +37,7 @@ lunar-javascript: For Solar to Lunar date conversion.
 
 toastify-js: For alert notifications.
 
-=============
+
 How to Run
 =============
 Since this is a static Single Page Application (SPA), no backend server installation is required.
@@ -51,6 +51,7 @@ Open index.html (or your filename) directly in any modern web browser (Chrome, E
 Tip: For the best experience during development, use the "Live Server" extension in VS Code.
 
 Usage Guide
+=============
 Enter Details:
 
 Name: Enter the client's name.
@@ -68,6 +69,7 @@ View Results: Scroll down to see the Soul/Life tables, Matrices, Triangles, and 
 Export: Click "Save PDF / Print" to save the analysis as a PDF file or print it on A4 paper.
 
 Algorithm Overview
+=============
 Basic Calculation (Recursive Sum)
 Numbers are summed recursively until they become a single digit (except for specific intermediate steps in the chart).
 
@@ -86,7 +88,7 @@ Result: The final code is derived from G I F J.
 
 Validation: The system sums the result of the Lucky Number and compares it against the Start Number (Soul/Life Code base) to verify accuracy.
 
-=============
+
 License
 =============
 This project is for educational and personal use.
