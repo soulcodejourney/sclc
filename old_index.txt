@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soul Code Calculator (Guest Mode)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript/lunar.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* Responsive adjustments for Charts - TRIANGLE SCALED UP 25% */
+        @media (max-width: 639px) { 
+            .result-grid { flex-direction: column !important; } 
+            .result-grid > div { width: 100% !important; } 
+            .triangle-svg { width: 225px !important; height: 181px !important; } 
+            .matrix-svg { width: 140px !important; height: 105px !important; } 
+            .part-title { font-size: 0.75rem !important; } 
+            .summary-text { font-size: 1.25rem !important; } 
+            .table-cell { padding: 0.25rem !important; font-size: 0.7rem !important; } 
+        }
+        @media (min-width: 640px) and (max-width: 767px) { 
+            .triangle-svg { width: 238px !important; height: 188px !important; } 
+            .matrix-svg { width: 150px !important; height: 115px !important; } 
+        }
+        @media (min-width: 768px) and (max-width: 1023px) { 
+            .triangle-svg { width: 250px !important; height: 200px !important; } 
+            .matrix-svg { width: 160px !important; height: 120px !important; } 
+        }
+        @media (min-width: 1024px) and (max-width: 1279px) { 
+            .triangle-svg { width: 263px !important; height: 210px !important; } 
+            .matrix-svg { width: 165px !important; height: 125px !important; } 
+        }
+        @media (min-width: 1280px) { 
+            .triangle-svg { width: 275px !important; height: 219px !important; } 
+            .matrix-svg { width: 170px !important; height: 130px !important; } 
+            .container-main { max-width: 1000px !important; } 
+        }
+        
+        body { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); }
+        .header-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <div class="header-bg text-white p-4 shadow-lg mb-6">
+        <div class="container-main max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl sm:text-2xl font-bold">Soul Code Calculator</h1>
+            <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">Guest Mode</span>
+        </div>
+    </div>
+
+    <div id="app-container" class="p-2 sm:p-4">
+        
+        <div class="container-main max-w-4xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg mb-6 relative">
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Name (ชื่อ)</label>
+                <input type="text" id="clientName" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="Enter Name">
+            </div>
+            <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Date of Birth</label>
+                    <input type="date" id="dob" class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Time</label>
+                    <input type="time" id="birthTime" value="00:00" class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Predict Year</label>
+                    <input type="number" id="currentYear" class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+            </div>
+
+            <button id="btnCalc" class="w-full py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition shadow-md hover:shadow-lg text-sm sm:text-base">
+                🧮 SCLC Code
+            </button>
+        </div>
+
+        <div id="resultSection" class="hidden container-main max-w-4xl mx-auto space-y-4">
+             
+             <div class="flex justify-end mb-2">
+                <button id="btnSaveImg" class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition shadow text-xs sm:text-sm">
+                    📷 Save Image
+                </button>
+             </div>
+
+             <div id="captureArea" class="bg-[#f3f4f6] p-4 rounded-xl"> 
+                 
+                 <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
+                     <h2 id="displayName" class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide"></h2>
+                     <p id="displayDetails" class="text-sm sm:text-base text-gray-500 mt-1 font-medium"></p>
+                 </div>
+
+                 <div class="result-grid flex justify-center gap-3 sm:gap-4 mb-4">
+                     <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-3 text-pink-600 uppercase tracking-wider">❤️ Soul Code</h3>
+                        <table id="soulTable" class="w-full text-center border-collapse text-xs sm:text-sm"></table>
+                    </div>
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-3 text-blue-600 uppercase tracking-wider">👤 Life Code</h3>
+                        <table id="lifeTable" class="w-full text-center border-collapse text-xs sm:text-sm"></table>
+                    </div>
+                </div>
+
+                <div class="result-grid flex justify-center gap-3 sm:gap-4 mb-4">
+                    <div class="bg-pink-50 p-4 rounded-xl shadow-md flex-1 border border-pink-100">
+                        <div class="flex justify-around items-center">
+                            <div class="text-center"><p class="text-xs text-gray-500 mb-1 font-bold">SOUL CODE</p><p id="soulLifeCode" class="summary-text text-xl sm:text-3xl font-extrabold text-pink-600">-</p></div>
+                            <div class="h-10 w-px bg-pink-200"></div>
+                            <div class="text-center"><p class="text-xs text-gray-500 mb-1 font-bold">IQ</p><p id="soulIQ" class="summary-text text-xl sm:text-2xl font-bold text-pink-600">-</p></div>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-xl shadow-md flex-1 border border-blue-100">
+                        <div class="flex justify-around items-center">
+                            <div class="text-center"><p class="text-xs text-gray-500 mb-1 font-bold">LIFE CODE</p><p id="lifeLifeCode" class="summary-text text-xl sm:text-3xl font-extrabold text-blue-600">-</p></div>
+                            <div class="h-10 w-px bg-blue-200"></div>
+                            <div class="text-center"><p class="text-xs text-gray-500 mb-1 font-bold">IQ</p><p id="lifeIQ" class="summary-text text-xl sm:text-2xl font-bold text-blue-600">-</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-grid flex justify-center gap-3 sm:gap-4 mb-4">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-2 text-pink-600 uppercase">Bingo Line</h3>
+                        <div class="flex justify-center gap-2 items-start">
+                            <div id="soulMatrix"></div>
+                            <div id="soulMatrixCount" class="text-xs pt-2"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-2 text-blue-600 uppercase">Bingo Line</h3>
+                        <div class="flex justify-center gap-2 items-start">
+                            <div id="lifeMatrix"></div>
+                            <div id="lifeMatrixCount" class="text-xs pt-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-grid flex justify-center gap-3 sm:gap-4">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-2 text-pink-600 uppercase">Triangle <span id="soulCurrentYear" class="text-gray-400"></span></h3>
+                        <div class="flex flex-col items-center gap-2">
+                            <div id="soulTriangle"></div>
+                            <div id="soulTriangleResult" class="w-full"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-2 text-blue-600 uppercase">Triangle <span id="lifeCurrentYear" class="text-gray-400"></span></h3>
+                        <div class="flex flex-col items-center gap-2">
+                            <div id="lifeTriangle"></div>
+                            <div id="lifeTriangleResult" class="w-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div> </div>
+    </div>
+
+    <script>
+        // --- 1. INITIALIZATION ---
+        window.onload = function() { 
+            document.getElementById('currentYear').value = new Date().getFullYear(); 
+            document.getElementById('birthTime').value = '00:00';
+            safeToast("👋 Welcome to Guest Mode");
+        };
+
+        // --- 2. MAIN LOGIC ---
+        document.getElementById('btnCalc').addEventListener('click', calculate);
+        
+        // --- 2.1 IMAGE SAVING LOGIC ---
+        document.getElementById('btnSaveImg').addEventListener('click', function() {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "⏳ Saving...";
+            btn.disabled = true;
+
+            const element = document.getElementById('captureArea');
+            
+            // Wait a moment for fonts to settle
+            setTimeout(() => {
+                html2canvas(element, {
+                    scale: 2, // Higher resolution
+                    useCORS: true,
+                    backgroundColor: "#f3f4f6", // Match body background
+                    logging: false
+                }).then(canvas => {
+                    // Create download link
+                    const link = document.createElement('a');
+                    const name = document.getElementById('clientName').value || "SoulCode";
+                    link.download = `${name}_Analysis.png`;
+                    link.href = canvas.toDataURL("image/png");
+                    link.click();
+                    
+                    // Reset Button
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    safeToast("✅ Image Saved!");
+                }).catch(err => {
+                    console.error(err);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    safeToast("❌ Error saving image", "red");
+                });
+            }, 100);
+        });
+
+        function calculate() {
+            const clientName = document.getElementById('clientName').value;
+            const dobInput = document.getElementById('dob').value;
+            const timeInput = document.getElementById('birthTime').value;
+            const currentYear = parseInt(document.getElementById('currentYear').value);
+
+            if (!dobInput) { safeToast('❌ Please select a Date of Birth', "red"); return; }
+
+            const [year, month, day] = dobInput.split('-').map(Number);
+            const [hour, mins] = timeInput ? timeInput.split(':').map(Number) : [0, 0];
+
+            let lunarYear, lunarMonth, lunarDay;
+            try { 
+                const solar = Solar.fromYmd(year, month, day); 
+                const lunar = solar.getLunar(); 
+                lunarYear = lunar.getYear(); 
+                lunarMonth = lunar.getMonth(); 
+                lunarDay = lunar.getDay(); 
+            } catch (e) { 
+                console.warn("Lunar conversion failed, using Solar", e);
+                lunarYear = year; lunarMonth = month; lunarDay = day; 
+            }
+
+            // SOUL CODE (Solar)
+            const soul = calculateCode(year, month, day, hour, mins);
+            const soulMonthDateSum = sumDigits(String(day).padStart(2, '0')) + sumDigits(String(month).padStart(2, '0'));
+            const soulSequence = createSequence(soul.startNum);
+            const soulYearResults = calculateYearResults(soulMonthDateSum, currentYear);
+            const soulIQ = calculateIQ(soul.dateResult, year, month, day);
+            const soulCounts = countDigits(year, month, day, soul.dateResult);
+
+            // LIFE CODE (Lunar)
+            const life = calculateCode(lunarYear, lunarMonth, lunarDay, hour, mins);
+            const lifeMonthDateSum = sumDigits(String(lunarDay).padStart(2, '0')) + sumDigits(String(lunarMonth).padStart(2, '0'));
+            const lifeSequence = createSequence(life.startNum);
+            const lifeYearResults = calculateYearResults(lifeMonthDateSum, currentYear);
+            const lifeIQ = calculateIQ(life.dateResult, lunarYear, lunarMonth, lunarDay);
+            const lifeCounts = countDigits(lunarYear, lunarMonth, lunarDay, life.dateResult);
+
+            // RENDER UI
+            // 1. UPDATE HEADER FOR IMAGE
+            document.getElementById('displayName').textContent = clientName || "Guest Analysis";
+            document.getElementById('displayDetails').textContent = `DOB: ${dobInput} | Time: ${timeInput} | Prediction Year: ${currentYear}`;
+
+            // 2. RENDER TABLES
+            document.getElementById('soulTable').innerHTML = generateTable(year, month, day, hour, mins, soul, 'border-pink-200', 'bg-pink-100', 'text-pink-600');
+            document.getElementById('lifeTable').innerHTML = generateTable(lunarYear, lunarMonth, lunarDay, hour, mins, life, 'border-blue-200', 'bg-blue-100', 'text-blue-600');
+            
+            document.getElementById('soulLifeCode').textContent = soul.dateResult;
+            document.getElementById('soulIQ').innerHTML = soulIQ.num + '<br><span class="text-xs font-normal text-gray-500">(' + soulIQ.label + ')</span>';
+            
+            document.getElementById('lifeLifeCode').textContent = life.dateResult;
+            document.getElementById('lifeIQ').innerHTML = lifeIQ.num + '<br><span class="text-xs font-normal text-gray-500">(' + lifeIQ.label + ')</span>';
+            
+            document.getElementById('soulMatrix').innerHTML = generateMatrixSVG(soulCounts, '#db2777'); 
+            document.getElementById('soulMatrixCount').innerHTML = generateCountSummary(soulCounts, 'text-pink-600');
+            
+            document.getElementById('lifeMatrix').innerHTML = generateMatrixSVG(lifeCounts, '#2563eb'); 
+            document.getElementById('lifeMatrixCount').innerHTML = generateCountSummary(lifeCounts, 'text-blue-600');
+            
+            document.getElementById('soulCurrentYear').textContent = '(' + currentYear + ')';
+            document.getElementById('lifeCurrentYear').textContent = '(' + currentYear + ')';
+            
+            document.getElementById('soulTriangle').innerHTML = generateTriangleSVG(soulSequence, soulYearResults, '#fce4ec', '#db2777', '#db2777');
+            document.getElementById('soulTriangleResult').innerHTML = generateTriangleResultSummary(soulYearResults, currentYear, 'bg-pink-50', 'text-pink-600', 'border-pink-200');
+            
+            document.getElementById('lifeTriangle').innerHTML = generateTriangleSVG(lifeSequence, lifeYearResults, '#dbeafe', '#2563eb', '#2563eb');
+            document.getElementById('lifeTriangleResult').innerHTML = generateTriangleResultSummary(lifeYearResults, currentYear, 'bg-blue-50', 'text-blue-600', 'border-blue-200');
+            
+            document.getElementById('resultSection').classList.remove('hidden');
+            
+            // Scroll to results
+            document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- 3. MATH UTILS ---
+        function sumDigits(numStr) { return String(numStr).split('').reduce((sum, d) => sum + parseInt(d), 0); }
+        function reduceNumber(num) { const steps = [num]; while (num >= 10) { num = String(num).split('').reduce((sum, d) => sum + parseInt(d), 0); steps.push(num); } return steps; }
+        function formatResult(steps) { return steps.join('/'); }
+        function getDobDigits(year, month, day) { return (String(day).padStart(2,'0')+String(month).padStart(2,'0')+String(year)).split('').map(d=>parseInt(d)); }
+        
+        function extractIqDigits(lifeCode) { 
+            const parts = lifeCode.split('/'); 
+            if (parts.length === 2) { 
+                const f = parts[0]; 
+                const l = parseInt(parts[1]); 
+                if (f.length === 1) return [parseInt(f), parseInt(f), l]; 
+                return [parseInt(f[0]), parseInt(f[1]), l]; 
+            } 
+            if (parts.length === 3) return [parseInt(parts[0][0]), parseInt(parts[0][1]), parseInt(parts[2])]; 
+            return [parseInt(parts[0]), parseInt(parts[0]), parseInt(parts[0])]; 
+        }
+
+        // --- 4. CALCULATION LOGIC ---
+        function calculateIQ(lc, y, m, d) { 
+            const [a1, a2, a3] = extractIqDigits(lc); 
+            const dd = getDobDigits(y, m, d); 
+            const hasA1 = dd.includes(a1);
+            const hasA2 = dd.includes(a2);
+            const hasA3 = dd.includes(a3);
+            
+            if (!hasA1 && !hasA2 && !hasA3) return {num: 1, label: 'Parent'}; 
+            if (!hasA1 && hasA2  && !hasA3) return {num: 2, label: 'Teacher'};      
+            if (hasA1  && !hasA2 && !hasA3) return {num: 2, label: 'Teacher'};      
+            if (hasA1  && hasA2  && !hasA3) return {num: 3, label: 'Friend'};    
+            if (!hasA1 && !hasA2 && hasA3)  return {num: 4, label: 'Partner'}; 
+            if (!hasA1 && hasA2  && hasA3)  return {num: 5, label: 'Guru'};      
+            if (hasA1  && !hasA2 && hasA3)  return {num: 5, label: 'Guru'};      
+            if (hasA1  && hasA2  && hasA3)  return {num: 6, label: 'Self'};      
+            return {num: 1, label: 'Parent'}; 
+        }
+
+        function calculateCode(y,m,d,h,mi) { 
+            let ys=sumDigits(y), yr=formatResult(reduceNumber(ys)), ps=ys; 
+            let ms=ps+sumDigits(String(m).padStart(2,'0')), mr=formatResult(reduceNumber(ms)); ps=ms; 
+            let ds=ps+sumDigits(String(d).padStart(2,'0')), dst=reduceNumber(ds), dr=formatResult(dst), sn=dst[dst.length-1]; ps=ds; 
+            let hr='-',mir='-'; 
+            if(h!==0||mi!==0){ 
+                let hs=ps+sumDigits(String(h).padStart(2,'0')); hr=formatResult(reduceNumber(hs)); ps=hs; 
+                let mis=ps+sumDigits(String(mi).padStart(2,'0')); mir=formatResult(reduceNumber(mis)); 
+            } 
+            return {yearResult:yr,monthResult:mr,dateResult:dr,hourResult:hr,minsResult:mir,startNum:sn}; 
+        }
+
+        function countDigits(y,m,d,lc) { 
+            let s=String(y)+String(m).padStart(2,'0')+String(d).padStart(2,'0'); 
+            const p=lc.split('/'); 
+            s+=(p.length===3?p[0]+p[2]:lc.replace(/\//g,'')); 
+            const c={}; for(let i=0;i<=9;i++)c[i]=0; 
+            for(const x of s)c[parseInt(x)]++; 
+            return c; 
+        }
+
+        // --- 5. RENDERERS ---
+        function generateCountSummary(c,tc) { 
+            let h='<div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">'; 
+            const l=[1,2,3,4,5],r=[6,7,8,9,0]; 
+            for(let i=0;i<5;i++){ 
+                h+=`<div class="${c[l[i]]>0?'':'opacity-30'}"><span class="font-medium text-gray-500">${l[i]}</span> : <span class="${tc} font-bold">${c[l[i]]||'-'}</span></div>`; 
+                h+=`<div class="${c[r[i]]>0?'':'opacity-30'}"><span class="font-medium text-gray-500">${r[i]}</span> : <span class="${tc} font-bold">${c[r[i]]||'-'}</span></div>`; 
+            } 
+            return h+'</div>'; 
+        }
+
+        function generateMatrixSVG(c,sc) { 
+            const pos={1:{x:50,y:50},2:{x:50,y:130},3:{x:50,y:210},4:{x:130,y:50},5:{x:130,y:130},6:{x:130,y:210},7:{x:210,y:50},8:{x:210,y:130},9:{x:210,y:210},0:{x:290,y:210}}, 
+            rad={1:[18],2:[15,22],3:[12,18,24],4:[10,15,20,25],5:[8,13,18,23,28]}, 
+            lin=[{n:[1,2,3],p:[[50,50],[50,210]]},{n:[4,5,6],p:[[130,50],[130,210]]},{n:[7,8,9],p:[[210,50],[210,210]]},{n:[1,4,7],p:[[50,50],[210,50]]},{n:[2,5,8],p:[[50,130],[210,130]]},{n:[3,6,9],p:[[50,210],[210,210]]},{n:[1,5,9],p:[[50,50],[210,210]]},{n:[3,5,7],p:[[50,210],[210,50]]},{n:[2,4],p:[[50,130],[130,50]]},{n:[2,6],p:[[50,130],[130,210]]},{n:[4,8],p:[[130,50],[210,130]]},{n:[6,8],p:[[130,210],[210,130]]}]; 
+            let s=`<svg class="matrix-svg" viewBox="0 0 340 260"><rect x="10" y="10" width="240" height="240" fill="#f9fafb" stroke="#e5e7eb" rx="12"/><line x1="90" y1="10" x2="90" y2="250" stroke="#e5e7eb"/><line x1="170" y1="10" x2="170" y2="250" stroke="#e5e7eb"/><line x1="10" y1="90" x2="250" y2="90" stroke="#e5e7eb"/><line x1="10" y1="170" x2="250" y2="170" stroke="#e5e7eb"/>`; 
+            for(const l of lin)if(l.n.every(k=>c[k]>0))s+=`<line x1="${l.p[0][0]}" y1="${l.p[0][1]}" x2="${l.p[1][0]}" y2="${l.p[1][1]}" stroke="#374151" stroke-width="3" stroke-linecap="round"/>`; 
+            for(let k=0;k<=9;k++){const p=pos[k],cnt=Math.min(c[k],5);if(cnt>0){for(const r of rad[cnt])s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="none" stroke="${sc}" stroke-width="2"/>`;s+=`<text x="${p.x}" y="${p.y+7}" text-anchor="middle" font-size="20" font-weight="bold" fill="#1f2937">${k}</text>`;}else s+=`<text x="${p.x}" y="${p.y+7}" text-anchor="middle" font-size="20" fill="#d1d5db">${k}</text>`;}return s+'</svg>'; 
+        }
+
+        function createSequence(s) { const q=[]; let n=s; for(let i=0;i<9;i++){ q.push(n); n=n===9?1:n+1; } return q; }
+        function calculateYearResults(mds, cy) { const r=[]; for(let i=-1;i<=7;i++){ const yr=cy+i,ys=sumDigits(yr),tot=mds+ys,st=reduceNumber(tot); r.push({year:yr,result:formatResult(st),lastDigit:st[st.length-1],isCurrent:i===0}); } return r; }
+        
+        const triPos={1:{x:45,y:320,rx:45,ry1:345,ry2:361,a:'middle'},2:{x:60,y:233,rx:40,ry1:225,ry2:241,a:'end'},3:{x:95,y:148,rx:75,ry1:140,ry2:156,a:'end'},4:{x:200,y:45,rx:230,ry1:35,ry2:52,a:'start'},5:{x:305,y:148,rx:340,ry1:140,ry2:156,a:'start'},6:{x:340,y:233,rx:375,ry1:225,ry2:241,a:'start'},7:{x:340,y:320,rx:340,ry1:345,ry2:361,a:'middle'},8:{x:247,y:320,rx:247,ry1:345,ry2:361,a:'middle'},9:{x:153,y:320,rx:153,ry1:345,ry2:361,a:'middle'}};
+        
+        function generateTriangleSVG(seq,yRes,fc,sc,rc) { 
+            let s=`<svg class="triangle-svg" viewBox="-30 0 580 450"><polygon points="200,50 60,292 340,292" fill="${fc}" stroke="${sc}" stroke-width="2" stroke-linejoin="round"/>`; 
+            for(let i=1;i<=9;i++){ 
+                const n=seq[i-1],p=triPos[i],yd=yRes.find(r=>r.lastDigit===n),fs=(i===1||i===4||i===7)?24:20,ny=i===4?p.y:p.y+7; 
+                s+=`<text x="${p.x}" y="${ny}" text-anchor="${p.a}" font-size="${fs}" font-weight="bold" fill="#1f2937">${n}</text>`; 
+                if(yd){ 
+                    const ig=yd.isCurrent,c=ig?'#16a34a':rc,fw=ig?'bold':'normal'; 
+                    s+=`<text x="${p.rx}" y="${p.ry1}" text-anchor="${p.a}" font-size="14" font-weight="${fw}" fill="${c}">${yd.result}</text>`; 
+                    s+=`<text x="${p.rx}" y="${p.ry2}" text-anchor="${p.a}" font-size="12" font-weight="${fw}" fill="${ig?'#16a34a':'#9ca3af'}">(${yd.year})</text>`; 
+                } 
+            } return s+'</svg>'; 
+        }
+
+        function generateTriangleResultSummary(yr,cy,bg,tc,bc) { 
+            const c=yr.find(r=>r.isCurrent); 
+            return c?`<div class="${bg} border-2 ${bc} rounded-lg p-2 text-center w-full"><p class="text-xs text-gray-600">Prediction ${cy}</p><p class="text-lg font-bold ${tc}">${c.result}</p></div>`:''; 
+        }
+
+        function generateTable(y,m,d,h,mi,c,bc,bg,tc) { 
+            return `<thead><tr class="${bg}"><th class="table-cell border ${bc} px-1 sm:px-2 py-1 text-gray-600">Year</th><th class="table-cell border ${bc} px-1 sm:px-2 py-1 text-gray-600">Month</th><th class="table-cell border ${bc} px-1 sm:px-2 py-1 text-gray-600">Date</th><th class="table-cell border ${bc} px-1 sm:px-2 py-1 text-gray-600">Hour</th><th class="table-cell border ${bc} px-1 sm:px-2 py-1 text-gray-600">Mins</th></tr></thead><tbody><tr><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${y}</td><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${String(m).padStart(2,'0')}</td><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${String(d).padStart(2,'0')}</td><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${String(h).padStart(2,'0')}</td><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${String(mi).padStart(2,'0')}</td></tr><tr class="font-bold ${tc}"><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${c.yearResult}</td><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${c.monthResult}</td><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${c.dateResult}</td><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${c.hourResult}</td><td class="table-cell border ${bc} px-1 sm:px-2 py-1">${c.minsResult}</td></tr></tbody>`; 
+        }
+        
+        function safeToast(msg, color="green") { 
+            if (typeof Toastify !== 'undefined') { 
+                Toastify({ text: msg, duration: 3000, style: { background: color==="red"?"#ef4444":"#10b981", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }, gravity: "top", position: "center" }).showToast(); 
+            } else { console.log(msg); } 
+        }
+    </script>
+</body>
+</html>
