@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soul Code Calculator</title>
+
+    <!-- ===================== EXTERNAL LIBRARIES ===================== -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript/lunar.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- ===================== RESPONSIVE STYLES ===================== -->
+    <style>
+        /* --- Mobile (< 640px) --- */
+        @media (max-width: 639px) {
+            .result-grid { flex-direction: column !important; }
+            .result-grid > div { width: 100% !important; }
+            .triangle-svg { width: 225px !important; height: 181px !important; }
+            .matrix-svg  { width: 140px !important; height: 105px !important; }
+            .part-title  { font-size: 0.75rem !important; }
+            .summary-text { font-size: 1.25rem !important; }
+            .table-cell  { padding: 0.25rem !important; font-size: 0.7rem !important; }
+        }
+
+        /* --- Small tablet (640px – 767px) --- */
+        @media (min-width: 640px) and (max-width: 767px) {
+            .triangle-svg { width: 238px !important; height: 188px !important; }
+            .matrix-svg   { width: 150px !important; height: 115px !important; }
+        }
+
+        /* --- Tablet (768px – 1023px) --- */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .triangle-svg { width: 250px !important; height: 200px !important; }
+            .matrix-svg   { width: 160px !important; height: 120px !important; }
+        }
+
+        /* --- Small desktop (1024px – 1279px) --- */
+        @media (min-width: 1024px) and (max-width: 1279px) {
+            .triangle-svg { width: 263px !important; height: 210px !important; }
+            .matrix-svg   { width: 165px !important; height: 125px !important; }
+        }
+
+        /* --- Large desktop (>= 1280px) --- */
+        @media (min-width: 1280px) {
+            .triangle-svg  { width: 275px !important; height: 219px !important; }
+            .matrix-svg    { width: 170px !important; height: 130px !important; }
+            .container-main { max-width: 1000px !important; }
+        }
+
+        /* --- Global theme --- */
+        body      { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); }
+        .header-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    </style>
+</head>
+
+<body class="min-h-screen pb-10">
+
+    <!-- Hidden Netlify form for click tracking -->
+    <form name="click_tracking" netlify hidden>
+        <input type="text" name="client_name" />
+        <input type="text" name="action_time" />
+        <input type="text" name="device_info" />
+    </form>
+
+
+    <!-- ==================== HEADER WITH AUTH ==================== -->
+    <div class="header-bg text-white p-4 shadow-lg mb-6">
+        <div class="container-main max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl sm:text-2xl font-bold">Soul Code Calculator</h1>
+
+            <div id="authArea" class="flex items-center gap-2">
+
+                <!-- Guest state (shown by default) -->
+                <div id="authGuest">
+                    <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm mr-2">Guest</span>
+                    <button onclick="showModal('loginModal')"
+                            class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition">
+                        Login
+                    </button>
+                    <button onclick="showModal('registerModal')"
+                            class="px-3 py-1 bg-white/30 hover:bg-white/40 rounded-lg text-xs font-semibold transition">
+                        Register
+                    </button>
+                </div>
+
+                <!-- Member state (shown after login) -->
+                <div id="authMember" class="hidden flex items-center gap-2">
+                    <span class="bg-green-400/30 px-3 py-1 rounded-full text-xs font-semibold">Member</span>
+                    <span id="userEmail" class="text-xs opacity-80 hidden sm:inline"></span>
+                    <button onclick="showModal('profilesModal')"
+                            class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition">
+                        My Profiles
+                    </button>
+                    <button onclick="logoutUser()"
+                            class="px-3 py-1 bg-red-400/30 hover:bg-red-400/50 rounded-lg text-xs font-semibold transition">
+                        Logout
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== MAIN APP CONTAINER ==================== -->
+    <div id="app-container" class="p-2 sm:p-4">
+
+        <!-- ========== CALCULATOR FORM ========== -->
+        <div class="container-main max-w-4xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg mb-6 relative">
+
+            <!-- Name input -->
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Name (ชื่อ)</label>
+                <input type="text" id="clientName"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                       placeholder="Enter Name">
+            </div>
+
+            <!-- DOB / Time / Predict Year row -->
+            <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Date of Birth</label>
+                    <input type="date" id="dob"
+                           class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Time</label>
+                    <input type="time" id="birthTime" value="00:00"
+                           class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Predict Year</label>
+                    <input type="number" id="currentYear"
+                           class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex gap-2">
+                <button id="btnCalc" type="button"
+                        class="flex-1 py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition shadow-md hover:shadow-lg text-sm sm:text-base">
+                    🧮 SCLC Code
+                </button>
+                <button type="button" onclick="resetAll()"
+                        class="py-3 px-4 bg-gray-400 text-white font-bold rounded-lg hover:bg-gray-500 transition shadow-md text-sm sm:text-base"
+                        title="Reset All">
+                    🔄 Reset
+                </button>
+                <button type="button" onclick="showModal('beConverterModal')"
+                        class="py-3 px-4 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 transition shadow-md text-sm sm:text-base"
+                        title="Buddhist Era Converter">
+                    📅 BE↔CE
+                </button>
+            </div>
+        </div>
+
+
+        <!-- ========== RESULT SECTION (hidden until calculation) ========== -->
+        <div id="resultSection" class="hidden container-main max-w-4xl mx-auto space-y-4">
+
+            <!-- Save buttons -->
+            <div class="flex justify-end gap-2 mb-2">
+                <button id="btnSaveProfile" type="button"
+                        class="hidden items-center gap-2 px-4 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition shadow text-xs sm:text-sm">
+                    💾 Save Profile
+                </button>
+                <button id="btnSaveImg" type="button"
+                        class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition shadow text-xs sm:text-sm">
+                    📷 Save Image
+                </button>
+            </div>
+
+            <!-- Notes field (members only) -->
+            <div id="notesSection" class="hidden container-main max-w-4xl mx-auto">
+                <div class="bg-white p-4 rounded-xl shadow-lg">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Notes (บันทึกเพิ่มเติม)</label>
+                    <textarea id="profileNotes" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none resize-y"
+                              placeholder="Add personal notes about this customer..."></textarea>
+                </div>
+            </div>
+
+            <!-- Capture area (used by html2canvas for image export) -->
+            <div id="captureArea" class="bg-[#f3f4f6] p-4 rounded-xl">
+
+                <!-- Client name & details header -->
+                <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
+                    <h2 id="displayName" class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide"></h2>
+                    <p id="displayDetails" class="text-sm sm:text-base text-gray-500 mt-1 font-medium"></p>
+                </div>
+
+                <!-- Row 1: Soul Code table + Life Code table -->
+                <div class="result-grid flex justify-center gap-3 sm:gap-4 mb-4">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-3 text-pink-600 uppercase tracking-wider">❤️ Soul Code</h3>
+                        <table id="soulTable" class="w-full text-center border-collapse text-xs sm:text-sm"></table>
+                    </div>
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-3 text-blue-600 uppercase tracking-wider">👤 Life Code</h3>
+                        <table id="lifeTable" class="w-full text-center border-collapse text-xs sm:text-sm"></table>
+                    </div>
+                </div>
+
+                <!-- Row 2: Soul summary + Life summary -->
+                <div class="result-grid flex justify-center gap-3 sm:gap-4 mb-4">
+                    <!-- Soul summary -->
+                    <div class="bg-pink-50 p-4 rounded-xl shadow-md flex-1 border border-pink-100">
+                        <div class="flex justify-around items-center">
+                            <div class="text-center">
+                                <p class="text-xs text-gray-500 mb-1 font-bold">SOUL CODE</p>
+                                <p id="soulLifeCode" class="summary-text text-xl sm:text-3xl font-extrabold text-pink-600">-</p>
+                            </div>
+                            <div class="h-10 w-px bg-pink-200"></div>
+                            <div class="text-center">
+                                <p class="text-xs text-gray-500 mb-1 font-bold">IQ</p>
+                                <p id="soulIQ" class="summary-text text-xl sm:text-2xl font-bold text-pink-600">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Life summary -->
+                    <div class="bg-blue-50 p-4 rounded-xl shadow-md flex-1 border border-blue-100">
+                        <div class="flex justify-around items-center">
+                            <div class="text-center">
+                                <p class="text-xs text-gray-500 mb-1 font-bold">LIFE CODE</p>
+                                <p id="lifeLifeCode" class="summary-text text-xl sm:text-3xl font-extrabold text-blue-600">-</p>
+                            </div>
+                            <div class="h-10 w-px bg-blue-200"></div>
+                            <div class="text-center">
+                                <p class="text-xs text-gray-500 mb-1 font-bold">IQ</p>
+                                <p id="lifeIQ" class="summary-text text-xl sm:text-2xl font-bold text-blue-600">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Bingo matrices -->
+                <div class="result-grid flex justify-center gap-3 sm:gap-4 mb-4">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-2 text-pink-600 uppercase">Bingo Line</h3>
+                        <div class="flex justify-center gap-2 items-start">
+                            <div id="soulMatrix"></div>
+                            <div id="soulMatrixCount" class="text-xs pt-2"></div>
+                        </div>
+                        <div id="soulBingoSummary" class="mt-2"></div>
+                    </div>
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-2 text-blue-600 uppercase">Bingo Line</h3>
+                        <div class="flex justify-center gap-2 items-start">
+                            <div id="lifeMatrix"></div>
+                            <div id="lifeMatrixCount" class="text-xs pt-2"></div>
+                        </div>
+                        <div id="lifeBingoSummary" class="mt-2"></div>
+                    </div>
+                </div>
+
+                <!-- Row 4: Triangles -->
+                <div class="result-grid flex justify-center gap-3 sm:gap-4">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-2 text-pink-600 uppercase">
+                            Triangle <span id="soulCurrentYear" class="text-gray-400"></span>
+                        </h3>
+                        <div class="flex flex-col items-center gap-2">
+                            <div id="soulTriangle"></div>
+                            <div id="soulTriangleResult" class="w-full"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-lg flex-1">
+                        <h3 class="part-title text-sm font-bold text-center mb-2 text-blue-600 uppercase">
+                            Triangle <span id="lifeCurrentYear" class="text-gray-400"></span>
+                        </h3>
+                        <div class="flex flex-col items-center gap-2">
+                            <div id="lifeTriangle"></div>
+                            <div id="lifeTriangleResult" class="w-full"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /captureArea -->
+        </div><!-- /resultSection -->
+    </div><!-- /app-container -->
+
+
+    <!-- ==================== LOGIN MODAL ==================== -->
+    <div id="loginModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-800">Login</h2>
+                <button onclick="hideModal('loginModal')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <input type="email" id="loginEmail" placeholder="Email"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                <input type="password" id="loginPassword" placeholder="Password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                <button onclick="loginUser()" id="btnLogin"
+                        class="w-full py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition text-sm">
+                    Login
+                </button>
+                <p class="text-xs text-center text-gray-500">
+                    Don't have an account?
+                    <a href="#" onclick="hideModal('loginModal');showModal('registerModal')" class="text-purple-600 font-semibold">Register</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== REGISTER MODAL ==================== -->
+    <div id="registerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-800">Register</h2>
+                <button onclick="hideModal('registerModal')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <input type="email" id="regEmail" placeholder="Email"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                <input type="password" id="regPassword" placeholder="Password (min 6 characters)"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                <input type="password" id="regPasswordConfirm" placeholder="Confirm Password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                <button onclick="registerUser()" id="btnRegister"
+                        class="w-full py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition text-sm">
+                    Register
+                </button>
+                <p class="text-xs text-center text-gray-500">
+                    Already have an account?
+                    <a href="#" onclick="hideModal('registerModal');showModal('loginModal')" class="text-purple-600 font-semibold">Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== MY PROFILES MODAL ==================== -->
+    <div id="profilesModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 p-6 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-800">My Saved Profiles</h2>
+                <button onclick="hideModal('profilesModal')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <div id="profilesList" class="flex-1 overflow-y-auto space-y-2">
+                <p class="text-gray-400 text-sm text-center py-8">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== BE CONVERTER MODAL ==================== -->
+    <div id="beConverterModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-800">📅 Buddhist Era Converter</h2>
+                <button onclick="hideModal('beConverterModal')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <p class="text-xs text-gray-500 mb-4">Convert between Buddhist Era (พ.ศ.) and Gregorian (ค.ศ.) years. Formula: BE = CE + 543</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Buddhist Era (พ.ศ.)</label>
+                    <input type="number" id="beYear" placeholder="e.g. 2500"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                           oninput="convertBE()">
+                </div>
+                <div class="flex justify-center">
+                    <button onclick="swapBECE()"
+                            class="px-4 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm font-bold text-gray-600 transition">
+                        ⇅ Swap
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Gregorian (ค.ศ. / CE)</label>
+                    <input type="number" id="ceYear" placeholder="e.g. 1957"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                           oninput="convertCE()">
+                </div>
+                <button onclick="useCEYear()"
+                        class="w-full py-2 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 transition text-sm">
+                    Use CE Year in DOB
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== JAVASCRIPT ==================== -->
+    <script>
+    /* ================================================================
+     *  SECTION 1: SUPABASE INITIALIZATION
+     * ================================================================ */
+
+    const SUPABASE_URL = 'https://xcvnetpafrqkqshlpiug.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhjdm5ldHBhZnJxa3FzaGxwaXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTU0NDcsImV4cCI6MjA4ODczMTQ0N30.HTjVCQ1gSke0cEnSSTbJ9msWysK34ExedqIccWYw-5U';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    /** Currently logged-in user object (null if guest) */
+    let currentUser = null;
+
+    /** ID of the profile currently being edited (null for new profiles) */
+    let editingProfileId = null;
+
+
+    /* ================================================================
+     *  SECTION 2: APP INITIALIZATION
+     * ================================================================ */
+
+    window.onload = async function () {
+        try {
+            // Set default form values
+            document.getElementById('currentYear').value = new Date().getFullYear();
+            document.getElementById('birthTime').value = '00:00';
+
+            // Bind button events
+            document.getElementById('btnCalc').addEventListener('click', calculate);
+            document.getElementById('btnSaveImg').addEventListener('click', saveImage);
+            document.getElementById('btnSaveProfile').addEventListener('click', saveProfile);
+
+            // Check for existing auth session
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) {
+                setAuthState(session.user);
+            } else {
+                safeToast("👋 Welcome — Guest Mode");
+            }
+
+            // Listen for future auth changes (login/logout from other tabs, etc.)
+            const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+                if (session) {
+                    setAuthState(session.user);
+                } else {
+                    clearAuthState();
+                }
+            });
+
+            // Clean up listener on page unload to prevent memory leaks
+            window.addEventListener('beforeunload', () => subscription.unsubscribe());
+
+        } catch (e) {
+            console.error("Initialization Error:", e);
+            safeToast("👋 Welcome — Guest Mode");
+        }
+    };
+
+
+    /* ================================================================
+     *  SECTION 3: AUTHENTICATION
+     * ================================================================ */
+
+    /**
+     * Switch the UI to "logged in" state.
+     * Shows member controls, hides guest controls.
+     * @param {object} user - Supabase user object
+     */
+    function setAuthState(user) {
+        currentUser = user;
+        document.getElementById('authGuest').classList.add('hidden');
+        document.getElementById('authMember').classList.remove('hidden');
+        document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('btnSaveProfile').classList.remove('hidden');
+        document.getElementById('btnSaveProfile').classList.add('flex');
+        document.getElementById('notesSection').classList.remove('hidden');
+    }
+
+    /**
+     * Switch the UI back to "guest" state.
+     * Hides member controls, shows guest controls.
+     */
+    function clearAuthState() {
+        currentUser = null;
+        editingProfileId = null;
+        document.getElementById('authGuest').classList.remove('hidden');
+        document.getElementById('authMember').classList.add('hidden');
+        document.getElementById('userEmail').textContent = '';
+        document.getElementById('btnSaveProfile').classList.add('hidden');
+        document.getElementById('btnSaveProfile').classList.remove('flex');
+        document.getElementById('notesSection').classList.add('hidden');
+    }
+
+    /**
+     * Log in with email + password via Supabase Auth.
+     */
+    async function loginUser() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!email || !password) {
+            safeToast('❌ Please fill in all fields', 'red');
+            return;
+        }
+
+        const btn = document.getElementById('btnLogin');
+        btn.textContent = 'Logging in...';
+        btn.disabled = true;
+
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+        btn.textContent = 'Login';
+        btn.disabled = false;
+
+        if (error) {
+            safeToast('❌ ' + error.message, 'red');
+        } else {
+            hideModal('loginModal');
+            safeToast('✅ Welcome back, ' + data.user.email);
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+    }
+
+    /**
+     * Register a new account via Supabase Auth.
+     */
+    async function registerUser() {
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const confirm = document.getElementById('regPasswordConfirm').value;
+
+        if (!email || !password) {
+            safeToast('❌ Please fill in all fields', 'red');
+            return;
+        }
+        if (password.length < 6) {
+            safeToast('❌ Password must be at least 6 characters', 'red');
+            return;
+        }
+        if (password !== confirm) {
+            safeToast('❌ Passwords do not match', 'red');
+            return;
+        }
+
+        const btn = document.getElementById('btnRegister');
+        btn.textContent = 'Registering...';
+        btn.disabled = true;
+
+        const { data, error } = await sb.auth.signUp({ email, password });
+
+        btn.textContent = 'Register';
+        btn.disabled = false;
+
+        if (error) {
+            safeToast('❌ ' + error.message, 'red');
+        } else {
+            hideModal('registerModal');
+            safeToast('✅ Registration successful! Please check your email to confirm.');
+            document.getElementById('regEmail').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regPasswordConfirm').value = '';
+        }
+    }
+
+    /**
+     * Sign the current user out.
+     */
+    async function logoutUser() {
+        await sb.auth.signOut();
+        safeToast('👋 Logged out');
+    }
+
+
+    /* ================================================================
+     *  SECTION 4: MODAL HELPERS
+     * ================================================================ */
+
+    /**
+     * Show a modal by ID. Auto-loads profiles if opening the profiles modal.
+     * @param {string} id - DOM element ID of the modal
+     */
+    function showModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+        if (id === 'profilesModal') {
+            loadProfiles();
+        }
+    }
+
+    /**
+     * Hide a modal by ID.
+     * @param {string} id - DOM element ID of the modal
+     */
+    function hideModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+
+
+    /* ================================================================
+     *  SECTION 5: BUDDHIST ERA (BE) ↔ GREGORIAN (CE) CONVERTER
+     * ================================================================ */
+
+    /** Convert Buddhist Era → Gregorian (BE - 543 = CE) */
+    function convertBE() {
+        const be = parseInt(document.getElementById('beYear').value);
+        document.getElementById('ceYear').value = !isNaN(be) ? be - 543 : '';
+    }
+
+    /** Convert Gregorian → Buddhist Era (CE + 543 = BE) */
+    function convertCE() {
+        const ce = parseInt(document.getElementById('ceYear').value);
+        document.getElementById('beYear').value = !isNaN(ce) ? ce + 543 : '';
+    }
+
+    /** Swap the values between BE and CE fields */
+    function swapBECE() {
+        const be = document.getElementById('beYear').value;
+        const ce = document.getElementById('ceYear').value;
+        document.getElementById('beYear').value = ce ? parseInt(ce) + 543 : '';
+        document.getElementById('ceYear').value = be ? parseInt(be) - 543 : '';
+    }
+
+    /** Apply the CE year value into the DOB input field */
+    function useCEYear() {
+        const ce = document.getElementById('ceYear').value;
+        if (!ce) {
+            safeToast('❌ Please enter a year first', 'red');
+            return;
+        }
+
+        const dobEl = document.getElementById('dob');
+        const currentVal = dobEl.value;
+
+        if (currentVal) {
+            // Replace just the year portion of the existing date
+            const parts = currentVal.split('-');
+            parts[0] = ce;
+            dobEl.value = parts.join('-');
+        } else {
+            // No date set yet — default to Jan 1 of that year
+            dobEl.value = ce + '-01-01';
+        }
+
+        hideModal('beConverterModal');
+        safeToast('✅ Year ' + ce + ' (CE) applied to DOB');
+    }
+
+
+    /* ================================================================
+     *  SECTION 6: PROFILE SAVE / LOAD / DELETE (Supabase)
+     * ================================================================ */
+
+    /**
+     * Save the current calculation as a profile to Supabase.
+     * If editingProfileId is set, updates the existing record; otherwise inserts new.
+     */
+    async function saveProfile() {
+        if (!currentUser) {
+            safeToast('❌ Please login first', 'red');
+            return;
+        }
+
+        const clientName = document.getElementById('clientName').value;
+        const dobInput   = document.getElementById('dob').value;
+        const timeInput  = document.getElementById('birthTime').value;
+        const currentYear = document.getElementById('currentYear').value;
+        const notes      = document.getElementById('profileNotes').value;
+
+        if (!dobInput) {
+            safeToast('❌ Please calculate first', 'red');
+            return;
+        }
+
+        // Capture all displayed result HTML for later restoration
+        const soulResult = captureResultHTML('soul');
+        const lifeResult = captureResultHTML('life');
+
+        const profileData = {
+            user_id:      currentUser.id,
+            client_name:  clientName || 'Unnamed',
+            dob:          dobInput,
+            birth_time:   timeInput,
+            predict_year: parseInt(currentYear),
+            soul_result:  soulResult,
+            life_result:  lifeResult,
+            notes:        notes
+        };
+
+        // Show saving state on button
+        const btn = document.getElementById('btnSaveProfile');
+        btn.innerHTML = '⏳ Saving...';
+        btn.disabled = true;
+
+        let result;
+        if (editingProfileId) {
+            // Update existing profile (don't overwrite user_id)
+            delete profileData.user_id;
+            result = await sb.from('profiles')
+                .update(profileData)
+                .eq('id', editingProfileId)
+                .eq('user_id', currentUser.id);
+        } else {
+            // Insert new profile
+            result = await sb.from('profiles').insert(profileData);
+        }
+
+        btn.innerHTML = '💾 Save Profile';
+        btn.disabled = false;
+
+        if (result.error) {
+            safeToast('❌ Save failed: ' + result.error.message, 'red');
+        } else {
+            safeToast('✅ Profile saved!');
+            // Track the new profile ID so subsequent saves update rather than duplicate
+            if (!editingProfileId && result.data && result.data[0]) {
+                editingProfileId = result.data[0].id;
+            }
+        }
+    }
+
+    /**
+     * Load the list of saved profiles for the current user and render them.
+     */
+    async function loadProfiles() {
+        if (!currentUser) return;
+
+        const { data, error } = await sb.from('profiles')
+            .select('id, client_name, dob, birth_time, predict_year, notes, created_at, updated_at')
+            .eq('user_id', currentUser.id)
+            .order('updated_at', { ascending: false });
+
+        const container = document.getElementById('profilesList');
+
+        if (error) {
+            container.innerHTML = '<p class="text-red-500 text-sm text-center py-4">Error loading profiles</p>';
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-gray-400 text-sm text-center py-8">No saved profiles yet. Calculate and save your first profile!</p>';
+            return;
+        }
+
+        container.innerHTML = data.map(p => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                <div class="flex-1 cursor-pointer" onclick="loadProfile('${p.id}')">
+                    <p class="font-bold text-sm text-gray-800">${escapeHtml(p.client_name)}</p>
+                    <p class="text-xs text-gray-500">DOB: ${p.dob} | Time: ${p.birth_time} | Year: ${p.predict_year}</p>
+                    ${p.notes ? '<p class="text-xs text-gray-400 mt-1 truncate max-w-xs">' + escapeHtml(p.notes) + '</p>' : ''}
+                    <p class="text-[10px] text-gray-300 mt-1">Updated: ${new Date(p.updated_at).toLocaleString('th-TH')}</p>
+                </div>
+                <div class="flex gap-1 ml-2">
+                    <button onclick="loadProfile('${p.id}')" class="px-2 py-1 bg-purple-100 text-purple-600 rounded text-xs font-bold hover:bg-purple-200 transition">Load</button>
+                    <button onclick="deleteProfile('${p.id}')" class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold hover:bg-red-200 transition">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Load a single profile by ID, populate the form inputs, and restore saved results.
+     * @param {string} id - Profile UUID from Supabase
+     */
+    async function loadProfile(id) {
+        const { data, error } = await sb.from('profiles')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error || !data) {
+            safeToast('❌ Failed to load profile', 'red');
+            return;
+        }
+
+        // Fill form inputs with saved data
+        document.getElementById('clientName').value   = data.client_name;
+        document.getElementById('dob').value          = data.dob;
+        document.getElementById('birthTime').value    = data.birth_time;
+        document.getElementById('currentYear').value  = data.predict_year;
+        document.getElementById('profileNotes').value = data.notes || '';
+        editingProfileId = data.id;
+
+        // Restore previously saved result HTML directly into the DOM
+        if (data.soul_result && data.life_result) {
+            document.getElementById('displayName').textContent    = data.client_name;
+            document.getElementById('displayDetails').textContent = `DOB: ${data.dob} | Time: ${data.birth_time} | Prediction Year: ${data.predict_year}`;
+
+            restoreResultHTML('soul', data.soul_result, data.predict_year);
+            restoreResultHTML('life', data.life_result, data.predict_year);
+
+            document.getElementById('resultSection').classList.remove('hidden');
+        }
+
+        hideModal('profilesModal');
+        safeToast('✅ Profile loaded: ' + data.client_name);
+    }
+
+    /**
+     * Delete a profile by ID after user confirmation.
+     * @param {string} id - Profile UUID from Supabase
+     */
+    async function deleteProfile(id) {
+        if (!confirm('Are you sure you want to delete this profile?')) return;
+
+        const { error } = await sb.from('profiles')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', currentUser.id);
+
+        if (error) {
+            safeToast('❌ Delete failed', 'red');
+        } else {
+            safeToast('✅ Profile deleted');
+            if (editingProfileId === id) editingProfileId = null;
+            loadProfiles();
+        }
+    }
+
+    /**
+     * Escape HTML special characters to prevent XSS when rendering user input.
+     * @param {string} str - Raw string to escape
+     * @returns {string} Escaped HTML string
+     */
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
+
+    /* ================================================================
+     *  SECTION 7: CORE CALCULATION ENGINE
+     * ================================================================ */
+
+    /**
+     * Compute all derived numerology data for a given date.
+     * Eliminates the duplicated soul/life calculation blocks.
+     */
+    function computeAllCodes(year, month, day, hour, mins, currentYear) {
+        const code         = calculateCode(year, month, day, hour, mins);
+        const monthDateSum = sumDigits(pad2(day)) + sumDigits(pad2(month));
+        const sequence     = createSequence(code.startNum);
+        const yearResults  = calculateYearResults(monthDateSum, currentYear);
+        const iq           = calculateIQ(code.dateResult, year, month, day);
+        const counts       = countDigitsByType(year, month, day, code.dateResult);
+        return { code, sequence, yearResults, iq, counts };
+    }
+
+    /** Element ID mapping for soul/life result sections */
+    const RESULT_IDS = {
+        soul: { table: 'soulTable', code: 'soulLifeCode', iq: 'soulIQ', matrix: 'soulMatrix', matrixCount: 'soulMatrixCount', bingoSummary: 'soulBingoSummary', yearLabel: 'soulCurrentYear', triangle: 'soulTriangle', triangleResult: 'soulTriangleResult' },
+        life: { table: 'lifeTable', code: 'lifeLifeCode', iq: 'lifeIQ', matrix: 'lifeMatrix', matrixCount: 'lifeMatrixCount', bingoSummary: 'lifeBingoSummary', yearLabel: 'lifeCurrentYear', triangle: 'lifeTriangle', triangleResult: 'lifeTriangleResult' }
+    };
+
+    /** Capture displayed result HTML for one code type into a serializable object. */
+    function captureResultHTML(type) {
+        const ids = RESULT_IDS[type];
+        return {
+            dateResult:        document.getElementById(ids.code).textContent,
+            iq:                document.getElementById(ids.iq).innerHTML,
+            tableHTML:         document.getElementById(ids.table).innerHTML,
+            matrixHTML:        document.getElementById(ids.matrix).innerHTML,
+            matrixCountHTML:   document.getElementById(ids.matrixCount).innerHTML,
+            bingoSummaryHTML:  document.getElementById(ids.bingoSummary).innerHTML,
+            triangleHTML:      document.getElementById(ids.triangle).innerHTML,
+            triangleResultHTML: document.getElementById(ids.triangleResult).innerHTML
+        };
+    }
+
+    /** Restore saved result HTML for one code type back into the DOM. */
+    function restoreResultHTML(type, result, predictYear) {
+        const ids = RESULT_IDS[type];
+        document.getElementById(ids.table).innerHTML         = result.tableHTML;
+        document.getElementById(ids.code).textContent        = result.dateResult;
+        document.getElementById(ids.iq).innerHTML            = result.iq;
+        document.getElementById(ids.matrix).innerHTML        = result.matrixHTML;
+        document.getElementById(ids.matrixCount).innerHTML    = result.matrixCountHTML;
+        document.getElementById(ids.bingoSummary).innerHTML   = result.bingoSummaryHTML || '';
+        document.getElementById(ids.yearLabel).textContent   = '(' + predictYear + ')';
+        document.getElementById(ids.triangle).innerHTML       = result.triangleHTML;
+        document.getElementById(ids.triangleResult).innerHTML = result.triangleResultHTML;
+    }
+
+    /** Clear all result elements for both soul and life. */
+    function clearAllResults() {
+        for (const type of ['soul', 'life']) {
+            const ids = RESULT_IDS[type];
+            document.getElementById(ids.table).innerHTML          = '';
+            document.getElementById(ids.code).textContent         = '-';
+            document.getElementById(ids.iq).textContent           = '-';
+            document.getElementById(ids.matrix).innerHTML         = '';
+            document.getElementById(ids.matrixCount).innerHTML    = '';
+            document.getElementById(ids.bingoSummary).innerHTML   = '';
+            document.getElementById(ids.triangle).innerHTML       = '';
+            document.getElementById(ids.triangleResult).innerHTML = '';
+        }
+    }
+
+    /**
+     * Render all result elements for one code type (soul or life).
+     */
+    function renderCodeResults(type, data, year, month, day, hour, mins, currentYear, theme) {
+        const ids = RESULT_IDS[type];
+        document.getElementById(ids.table).innerHTML         = generateTable(year, month, day, hour, mins, data.code, theme.border, theme.bg, theme.text);
+        document.getElementById(ids.code).textContent        = data.code.dateResult;
+        document.getElementById(ids.iq).innerHTML            = data.iq.num + '<br><span class="text-xs font-normal text-gray-500">(' + data.iq.label + ')</span>';
+        document.getElementById(ids.matrix).innerHTML        = generateMatrixSVG(data.counts, theme.hex);
+        document.getElementById(ids.matrixCount).innerHTML    = generateCountSummary(data.counts, theme.text);
+        document.getElementById(ids.bingoSummary).innerHTML   = generateBingoSummary(data.counts, theme.hex, theme.text);
+        document.getElementById(ids.yearLabel).textContent   = '(' + currentYear + ')';
+        document.getElementById(ids.triangle).innerHTML       = generateTriangleSVG(data.sequence, data.yearResults, theme.fill, theme.hex, theme.hex);
+        document.getElementById(ids.triangleResult).innerHTML = generateTriangleResultSummary(data.yearResults, currentYear, theme.summaryBg, theme.text, theme.summaryBorder);
+    }
+
+    /**
+     * Main calculation entry point. Reads form inputs, runs soul + life
+     * code calculations, and renders all results to the DOM.
+     */
+    function calculate() {
+        try {
+            const clientName  = document.getElementById('clientName').value;
+            const dobInput    = document.getElementById('dob').value;
+            const timeInput   = document.getElementById('birthTime').value;
+            const currentYear = parseInt(document.getElementById('currentYear').value);
+
+            if (!dobInput) {
+                safeToast('❌ Please select a Date of Birth', "red");
+                return;
+            }
+
+            trackClick(clientName);
+            editingProfileId = null; // New calculation = new profile
+
+            // Parse date and time
+            const [year, month, day] = dobInput.split('-').map(Number);
+            const [hour, mins] = timeInput ? timeInput.split(':').map(Number) : [0, 0];
+
+            // --- Convert Gregorian to Lunar date for the Life Code ---
+            let lunarYear, lunarMonth, lunarDay;
+
+            if (typeof Solar === 'undefined') {
+                console.error("Lunar Library not loaded");
+                safeToast("⚠️ Library Error: Please check internet connection", "red");
+                // Fallback: use Gregorian date as-is
+                lunarYear  = year;
+                lunarMonth = month;
+                lunarDay   = day;
+            } else {
+                try {
+                    const solar = Solar.fromYmd(year, month, day);
+                    const lunar = solar.getLunar();
+                    lunarYear  = lunar.getYear();
+                    lunarMonth = Math.abs(lunar.getMonth());
+                    lunarDay   = Math.abs(lunar.getDay());
+                } catch (e) {
+                    console.warn("Lunar conversion failed:", e);
+                    lunarYear  = year;
+                    lunarMonth = month;
+                    lunarDay   = day;
+                }
+            }
+
+            // --- Compute both codes using shared helper ---
+            const soulData = computeAllCodes(year, month, day, hour, mins, currentYear);
+            const lifeData = computeAllCodes(lunarYear, lunarMonth, lunarDay, hour, mins, currentYear);
+
+            // --- UPDATE THE DOM ---
+
+            // Header
+            document.getElementById('displayName').textContent    = clientName || "Guest Analysis";
+            document.getElementById('displayDetails').textContent = `DOB: ${dobInput} | Time: ${timeInput} | Prediction Year: ${currentYear}`;
+
+            // Render both code types using shared helper
+            renderCodeResults('soul', soulData, year, month, day, hour, mins, currentYear,
+                { border: 'border-pink-200', bg: 'bg-pink-100', text: 'text-pink-600', hex: '#db2777', fill: '#fce4ec', summaryBg: 'bg-pink-50', summaryBorder: 'border-pink-200' });
+            renderCodeResults('life', lifeData, lunarYear, lunarMonth, lunarDay, hour, mins, currentYear,
+                { border: 'border-blue-200', bg: 'bg-blue-100', text: 'text-blue-600', hex: '#2563eb', fill: '#dbeafe', summaryBg: 'bg-blue-50', summaryBorder: 'border-blue-200' });
+
+            // Show results and scroll into view
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+
+        } catch (err) {
+            console.error("Calculation Error:", err);
+            safeToast("❌ An error occurred during calculation", "red");
+        }
+    }
+
+    /**
+     * Reset the entire form and results to their default state.
+     */
+    function resetAll() {
+        document.getElementById('clientName').value   = '';
+        document.getElementById('dob').value          = '';
+        document.getElementById('birthTime').value    = '00:00';
+        document.getElementById('currentYear').value  = new Date().getFullYear();
+        document.getElementById('profileNotes').value = '';
+
+        // Clear all result displays
+        document.getElementById('resultSection').classList.add('hidden');
+        clearAllResults();
+        document.getElementById('displayName').textContent     = '';
+        document.getElementById('displayDetails').textContent  = '';
+
+        editingProfileId = null;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        safeToast('🔄 Reset complete');
+    }
+
+    /**
+     * Capture the result area as a PNG image and trigger a download.
+     */
+    function saveImage() {
+        const btn = document.getElementById('btnSaveImg');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "⏳ Saving...";
+        btn.disabled = true;
+
+        const element = document.getElementById('captureArea');
+        element.scrollIntoView({ behavior: "instant", block: "start" });
+
+        // Short delay to let the browser finish rendering/scrolling
+        setTimeout(() => {
+            html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: "#f3f4f6",
+                logging: false,
+                imageTimeout: 0
+            }).then(canvas => {
+                const link = document.createElement('a');
+                const name = document.getElementById('clientName').value || "SoulCode";
+                const safeName = name.replace(/[^a-z0-9ก-๙]/gi, '_');
+                link.download = `${safeName}_Analysis.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                safeToast("✅ Image Saved!");
+            }).catch(err => {
+                console.error(err);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                safeToast("❌ Error saving image", "red");
+            });
+        }, 500);
+    }
+
+
+    /* ================================================================
+     *  SECTION 8: NUMEROLOGY MATH HELPERS
+     * ================================================================ */
+
+    /** Pad a number to 2 digits: 3 → "03", 12 → "12" */
+    const pad2 = (n) => String(n).padStart(2, '0');
+
+    /**
+     * Build the ddmmyyyy string from date components.
+     * @param {number} year
+     * @param {number} month
+     * @param {number} day
+     * @returns {string}
+     */
+    function formatDobString(year, month, day) {
+        return pad2(day) + pad2(month) + String(year);
+    }
+
+    /** Create a digit count object {0:0, 1:0, ..., 9:0} */
+    function initDigitCounts() {
+        const counts = {};
+        for (let i = 0; i <= 9; i++) counts[i] = 0;
+        return counts;
+    }
+
+    /**
+     * Sum all individual digits of a number string.
+     * Example: "1987" → 1+9+8+7 = 25
+     * @param {string} numStr
+     * @returns {number}
+     */
+    function sumDigits(numStr) {
+        return String(numStr)
+            .split('')
+            .reduce((sum, digit) => sum + parseInt(digit), 0);
+    }
+
+    /**
+     * Repeatedly sum digits until a single digit is reached.
+     * Returns an array of all intermediate values.
+     * Example: 25 → [25, 7]
+     * @param {number} num
+     * @returns {number[]}
+     */
+    function reduceNumber(num) {
+        const steps = [num];
+        while (num >= 10) {
+            num = String(num)
+                .split('')
+                .reduce((sum, digit) => sum + parseInt(digit), 0);
+            steps.push(num);
+        }
+        return steps;
+    }
+
+    /**
+     * Join reduction steps with "/" for display.
+     * Example: [25, 7] → "25/7"
+     * @param {number[]} steps
+     * @returns {string}
+     */
+    function formatResult(steps) {
+        return steps.join('/');
+    }
+
+    /**
+     * Get all individual digits from a DOB as dd+mm+yyyy string.
+     * Example: (1987, 3, 15) → [1,5,0,3,1,9,8,7]
+     * @param {number} year
+     * @param {number} month
+     * @param {number} day
+     * @returns {number[]}
+     */
+    function getDobDigits(year, month, day) {
+        return formatDobString(year, month, day).split('').map(d => parseInt(d));
+    }
+
+    /**
+     * Extract three IQ comparison digits from a life code string.
+     *
+     * Rules:
+     *   "34/7"  → [3, 4, 7]  (two-digit first part + final digit)
+     *   "7"     → [7, 7, 7]  (single digit repeated)
+     *   "7/7"   → [7, 7, 7]  (single first part duplicated)
+     *
+     * @param {string} lifeCode - e.g. "34/7" or "25/7"
+     * @returns {number[]} Array of 3 digits [a1, a2, a3]
+     */
+    function extractIqDigits(lifeCode) {
+        const parts = lifeCode.split('/');
+
+        if (parts.length === 2) {
+            const firstPart = parts[0];
+            const lastDigit = parseInt(parts[1]);
+
+            if (firstPart.length === 1) {
+                // e.g. "7/7" → duplicate the single digit
+                return [parseInt(firstPart), parseInt(firstPart), lastDigit];
+            }
+            // e.g. "34/7" → split first part into two digits
+            return [parseInt(firstPart[0]), parseInt(firstPart[1]), lastDigit];
+        }
+
+        if (parts.length === 3) {
+            // e.g. "25/7/..." → take first char of first part, second char, and final part
+            return [parseInt(parts[0][0]), parseInt(parts[0][1]), parseInt(parts[2])];
+        }
+
+        // Single digit (no slashes)
+        const singleDigit = parseInt(parts[0]);
+        return [singleDigit, singleDigit, singleDigit];
+    }
+
+    /**
+     * Calculate the IQ classification based on whether life code digits
+     * appear in the person's DOB digits.
+     *
+     * Matching table:
+     *   a1  a2  a3  → Level
+     *   ✗   ✗   ✗  → 1 Parent
+     *   ✓   ✗   ✗  → 2 Teacher
+     *   ✗   ✓   ✗  → 2 Teacher
+     *   ✓   ✓   ✗  → 3 Friend
+     *   ✗   ✗   ✓  → 4 Partner
+     *   ✓   ✗   ✓  → 5 Guru
+     *   ✗   ✓   ✓  → 5 Guru
+     *   ✓   ✓   ✓  → 6 Self
+     *
+     * @param {string} lifeCode - The date result string (e.g. "34/7")
+     * @param {number} year
+     * @param {number} month
+     * @param {number} day
+     * @returns {{ num: number, label: string }}
+     */
+    function calculateIQ(lifeCode, year, month, day) {
+        const [a1, a2, a3] = extractIqDigits(lifeCode);
+        const dobDigits = getDobDigits(year, month, day);
+
+        const hasA1 = dobDigits.includes(a1);
+        const hasA2 = dobDigits.includes(a2);
+        const hasA3 = dobDigits.includes(a3);
+
+        if (!hasA1 && !hasA2 && !hasA3) return { num: 1, label: 'Parent' };
+        if (!hasA1 &&  hasA2 && !hasA3) return { num: 2, label: 'Teacher' };
+        if ( hasA1 && !hasA2 && !hasA3) return { num: 2, label: 'Teacher' };
+        if ( hasA1 &&  hasA2 && !hasA3) return { num: 3, label: 'Friend' };
+        if (!hasA1 && !hasA2 &&  hasA3) return { num: 4, label: 'Partner' };
+        if (!hasA1 &&  hasA2 &&  hasA3) return { num: 5, label: 'Guru' };
+        if ( hasA1 && !hasA2 &&  hasA3) return { num: 5, label: 'Guru' };
+        if ( hasA1 &&  hasA2 &&  hasA3) return { num: 6, label: 'Self' };
+
+        return { num: 1, label: 'Parent' };
+    }
+
+    /**
+     * Core numerology calculation: cumulative digit sum through year → month → date → hour → mins.
+     *
+     * Each step adds the digit sum of that component to a running total, then reduces.
+     *
+     * @param {number} year  - Birth year (Gregorian or Lunar)
+     * @param {number} month - Birth month
+     * @param {number} day   - Birth day
+     * @param {number} hour  - Birth hour (0-23)
+     * @param {number} mins  - Birth minutes (0-59)
+     * @returns {{
+     *   yearResult: string,
+     *   monthResult: string,
+     *   dateResult: string,
+     *   hourResult: string,
+     *   minsResult: string,
+     *   startNum: number
+     * }}
+     */
+    function calculateCode(year, month, day, hour, mins) {
+        // Step 1: Year — sum digits of the year
+        let runningSum = sumDigits(year);
+        const yearResult = formatResult(reduceNumber(runningSum));
+
+        // Step 2: Month — add digit sum of month (2-digit padded)
+        runningSum += sumDigits(pad2(month));
+        const monthResult = formatResult(reduceNumber(runningSum));
+
+        // Step 3: Date — add digit sum of day (2-digit padded)
+        runningSum += sumDigits(pad2(day));
+        const dateSteps = reduceNumber(runningSum);
+        const dateResult = formatResult(dateSteps);
+        const startNum = dateSteps[dateSteps.length - 1]; // Final single digit
+
+        // Step 4 & 5: Hour and Minutes (only if not 00:00)
+        let hourResult = '-';
+        let minsResult = '-';
+
+        if (hour !== 0 || mins !== 0) {
+            runningSum += sumDigits(pad2(hour));
+            hourResult = formatResult(reduceNumber(runningSum));
+
+            runningSum += sumDigits(pad2(mins));
+            minsResult = formatResult(reduceNumber(runningSum));
+        }
+
+        return {
+            yearResult,
+            monthResult,
+            dateResult,
+            hourResult,
+            minsResult,
+            startNum
+        };
+    }
+
+
+    /* ================================================================
+     *  SECTION 9: DIGIT COUNTING & BINGO MATRIX
+     * ================================================================ */
+
+    /**
+     * Count how many times each digit (0–9) appears across three categories:
+     *   - dob (past / อดีต)      — from the ddmmyyyy string
+     *   - future (อนาคต)        — from the second-to-last number in dateResult
+     *   - life (รหัสชีวิต)       — the final single digit of dateResult
+     *
+     * @param {number} year
+     * @param {number} month
+     * @param {number} day
+     * @param {string} dateResult - e.g. "34/7"
+     * @returns {{ dob: object, future: object, life: object, total: object }}
+     */
+    function countDigitsByType(year, month, day, dateResult) {
+        // DOB digits from ddmmyyyy
+        const dobStr = formatDobString(year, month, day);
+        const dob = initDigitCounts();
+        for (const ch of dobStr) dob[parseInt(ch)]++;
+
+        // Future digits: second-to-last part of the "/" separated result
+        const parts = dateResult.split('/');
+        const lifeDigit = parseInt(parts[parts.length - 1]);
+        const futureStr = parts.length >= 2 ? parts[parts.length - 2] : '';
+
+        const future = initDigitCounts();
+        for (const ch of futureStr) future[parseInt(ch)]++;
+
+        // Life digit: the final reduced single digit
+        const life = initDigitCounts();
+        life[lifeDigit]++;
+
+        // Total: sum of all three
+        const total = initDigitCounts();
+        for (let i = 0; i <= 9; i++) {
+            total[i] = dob[i] + future[i] + life[i];
+        }
+
+        return { dob, future, life, total };
+    }
+
+    /**
+     * Generate HTML showing the count summary for each digit (0–9),
+     * displayed in a 2-column grid.
+     *
+     * @param {object} digitData - Output of countDigitsByType()
+     * @param {string} textColorClass - Tailwind text color class for DOB markers
+     * @returns {string} HTML string
+     */
+    function generateCountSummary(digitData, textColorClass) {
+        const { dob, future, life, total } = digitData;
+
+        // Left column: 1–5, Right column: 6–9, 0
+        const leftDigits  = [1, 2, 3, 4, 5];
+        const rightDigits = [6, 7, 8, 9, 0];
+
+        let html = '<div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">';
+
+        for (let i = 0; i < 5; i++) {
+            html += formatCountItem(leftDigits[i],  dob, future, life, total, textColorClass);
+            html += formatCountItem(rightDigits[i], dob, future, life, total, textColorClass);
+        }
+
+        return html + '</div>';
+    }
+
+    /**
+     * Format a single digit's count as a small HTML snippet with shape indicators.
+     *   ○ = DOB (past)    △ = Future    □ = Life
+     *
+     * @param {number} key - Digit 0–9
+     * @param {object} dob
+     * @param {object} future
+     * @param {object} life
+     * @param {object} total
+     * @param {string} textColorClass
+     * @returns {string} HTML string
+     */
+    function formatCountItem(key, dob, future, life, total, textColorClass) {
+        let shapes = '';
+
+        if (dob[key] > 0) {
+            shapes += `<span class="${textColorClass}">○${dob[key]}</span> `;
+        }
+        if (future[key] > 0) {
+            shapes += '<span style="color:#eab308">△' + future[key] + '</span> ';
+        }
+        if (life[key] > 0) {
+            shapes += '<span style="color:#16a34a">□' + life[key] + '</span> ';
+        }
+
+        // Calculate weighted circle total: DOB×1 + Future×3 + Life×5
+        const circleTotal = (dob[key] * 1) + (future[key] * 3) + (life[key] * 5);
+
+        const opacityClass = total[key] > 0 ? '' : 'opacity-30';
+        return `<div class="${opacityClass}"><span class="font-medium text-gray-500">${key}</span> : <span class="font-bold">${shapes || '-'}</span>${circleTotal > 0 ? '<span class="text-gray-400">= ' + circleTotal + '</span>' : ''}</div>`;
+    }
+
+
+    /* ================================================================
+     *  SECTION 10: TRIANGLE SEQUENCE & YEAR PREDICTIONS
+     * ================================================================ */
+
+    /**
+     * Create a 9-number ascending sequence starting from startNum,
+     * wrapping from 9 back to 1.
+     *
+     * Example: startNum=7 → [7, 8, 9, 1, 2, 3, 4, 5, 6]
+     *
+     * @param {number} startNum - Starting digit (1–9)
+     * @returns {number[]}
+     */
+    function createSequence(startNum) {
+        const sequence = [];
+        let num = startNum;
+        for (let i = 0; i < 9; i++) {
+            sequence.push(num);
+            num = (num === 9) ? 1 : num + 1;
+        }
+        return sequence;
+    }
+
+    /**
+     * Calculate year prediction results for 9 consecutive years
+     * (currentYear-1 through currentYear+7).
+     *
+     * For each year:
+     *   total = monthDateSum + sumDigits(year)
+     *   result = reduce to single digit with steps
+     *
+     * @param {number} monthDateSum - Sum of day digits + month digits
+     * @param {number} currentYear
+     * @returns {Array<{ year: number, result: string, lastDigit: number, isCurrent: boolean }>}
+     */
+    function calculateYearResults(monthDateSum, currentYear) {
+        const results = [];
+
+        for (let offset = -1; offset <= 7; offset++) {
+            const year = currentYear + offset;
+            const yearDigitSum = sumDigits(year);
+            const total = monthDateSum + yearDigitSum;
+            const steps = reduceNumber(total);
+
+            results.push({
+                year:       year,
+                result:     formatResult(steps),
+                lastDigit:  steps[steps.length - 1],
+                isCurrent:  (offset === 0)
+            });
+        }
+
+        return results;
+    }
+
+
+    /* ================================================================
+     *  SECTION 11: SVG GENERATORS
+     * ================================================================ */
+
+    /**
+     * Positions for digits 0–9 on the 3×3 bingo matrix grid.
+     * Grid layout:  1  4  7
+     *               2  5  8
+     *               3  6  9  0
+     */
+    const MATRIX_POSITIONS = {
+        1: { x: 50,  y: 50  },
+        2: { x: 50,  y: 130 },
+        3: { x: 50,  y: 210 },
+        4: { x: 130, y: 50  },
+        5: { x: 130, y: 130 },
+        6: { x: 130, y: 210 },
+        7: { x: 210, y: 50  },
+        8: { x: 210, y: 130 },
+        9: { x: 210, y: 210 },
+        0: { x: 290, y: 210 }
+    };
+
+    /**
+     * Generate evenly spaced concentric radii for a given number of shapes.
+     * Uses fixed spacing (SHAPE_STEP) from a base radius so all shapes are
+     * clearly visible and symmetrically spaced regardless of count.
+     *
+     * @param {number} count - Number of concentric shapes to draw
+     * @returns {number[]} Array of radii from smallest to largest
+     */
+    const BASE_RADIUS = 13;
+    const SHAPE_STEP  = 6;
+
+    function generateRadii(count) {
+        if (count <= 0) return [];
+        return Array.from({ length: count }, (_, i) => BASE_RADIUS + i * SHAPE_STEP);
+    }
+
+    /**
+     * All 12 possible "bingo lines" connecting digits.
+     * Each line specifies which digits must all be present (total > 0)
+     * for the line to be drawn.
+     */
+    const BINGO_LINES = [
+        // Columns
+        { digits: [1, 2, 3], points: [[50, 50],  [50, 210]]  },
+        { digits: [4, 5, 6], points: [[130, 50], [130, 210]] },
+        { digits: [7, 8, 9], points: [[210, 50], [210, 210]] },
+        // Rows
+        { digits: [1, 4, 7], points: [[50, 50],  [210, 50]]  },
+        { digits: [2, 5, 8], points: [[50, 130], [210, 130]] },
+        { digits: [3, 6, 9], points: [[50, 210], [210, 210]] },
+        // Diagonals
+        { digits: [1, 5, 9], points: [[50, 50],  [210, 210]] },
+        { digits: [3, 5, 7], points: [[50, 210], [210, 50]]  },
+        // Short diagonals (2-digit connections)
+        { digits: [2, 4],    points: [[50, 130], [130, 50]]  },
+        { digits: [2, 6],    points: [[50, 130], [130, 210]] },
+        { digits: [4, 8],    points: [[130, 50], [210, 130]] },
+        { digits: [6, 8],    points: [[130, 210],[210, 130]] }
+    ];
+
+    /**
+     * Generate the bingo matrix as an SVG string.
+     *
+     * @param {object} digitData - Output of countDigitsByType()
+     * @param {string} strokeColor - Hex color for DOB circles
+     * @returns {string} SVG + legend HTML
+     */
+    function generateMatrixSVG(digitData, strokeColor) {
+        const { dob, future, life, total } = digitData;
+        const parts = [];
+
+        // Start SVG with background grid
+        parts.push(`<svg xmlns="http://www.w3.org/2000/svg" class="matrix-svg" viewBox="0 0 340 260">
+            <rect x="10" y="10" width="240" height="240" fill="#f9fafb" stroke="#e5e7eb" rx="12"/>
+            <line x1="90"  y1="10"  x2="90"  y2="250" stroke="#e5e7eb"/>
+            <line x1="170" y1="10"  x2="170" y2="250" stroke="#e5e7eb"/>
+            <line x1="10"  y1="90"  x2="250" y2="90"  stroke="#e5e7eb"/>
+            <line x1="10"  y1="170" x2="250" y2="170" stroke="#e5e7eb"/>`);
+
+        // Draw bingo lines where all connected digits are present
+        for (const line of BINGO_LINES) {
+            if (line.digits.every(digit => total[digit] > 0)) {
+                parts.push(`<line x1="${line.points[0][0]}" y1="${line.points[0][1]}" x2="${line.points[1][0]}" y2="${line.points[1][1]}" stroke="#374151" stroke-width="3" stroke-linecap="round"/>`);
+            }
+        }
+
+        // Draw shapes per digit: ○ DOB circles, △ Future triangles, □ Life squares
+        // Weighting: DOB ×1, Future ×3, Life ×5
+        for (let key = 0; key <= 9; key++) {
+            const pos = MATRIX_POSITIONS[key];
+
+            if (total[key] > 0) {
+                // Square always drawn at fixed largest size, then circles and triangles nest inside
+                const SQUARE_RADIUS = 34;
+                const innerShapes = [];
+                for (let i = 0; i < dob[key]; i++)    innerShapes.push({ type: 'circle',   color: strokeColor });
+                for (let i = 0; i < future[key]; i++) innerShapes.push({ type: 'triangle', color: '#eab308' });
+
+                // Draw square first (always outermost, fixed size) if life digit present
+                if (life[key] > 0) {
+                    const half = SQUARE_RADIUS * 0.75;
+                    parts.push(`<rect x="${pos.x - half}" y="${pos.y - half}" width="${half * 2}" height="${half * 2}" fill="none" stroke="#16a34a" stroke-width="2"/>`);
+                }
+
+                // Draw inner shapes (circles + triangles) using radii system
+                if (innerShapes.length > 0) {
+                    const radii = generateRadii(innerShapes.length);
+
+                    for (let i = 0; i < innerShapes.length; i++) {
+                        const r = radii[innerShapes.length - 1 - i];
+                        const s = innerShapes[i];
+                        if (s.type === 'circle') {
+                            parts.push(`<circle cx="${pos.x}" cy="${pos.y}" r="${r}" fill="none" stroke="${s.color}" stroke-width="2"/>`);
+                        } else {
+                            const tx = pos.x;
+                            const ty = pos.y - r;
+                            const bx1 = pos.x - r * 0.866;
+                            const by1 = pos.y + r * 0.5;
+                            const bx2 = pos.x + r * 0.866;
+                            const by2 = pos.y + r * 0.5;
+                            parts.push(`<polygon points="${tx},${ty} ${bx1.toFixed(1)},${by1.toFixed(1)} ${bx2.toFixed(1)},${by2.toFixed(1)}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`);
+                        }
+                    }
+                }
+
+                parts.push(`<text x="${pos.x}" y="${pos.y + 7}" text-anchor="middle" font-size="20" font-weight="bold" fill="#1f2937">${key}</text>`);
+            } else {
+                parts.push(`<text x="${pos.x}" y="${pos.y + 7}" text-anchor="middle" font-size="20" fill="#d1d5db">${key}</text>`);
+            }
+        }
+
+        parts.push('</svg>');
+        parts.push(`<div class="flex justify-center gap-3 mt-1 text-[10px]">
+                    <span class="text-gray-500">○ อดีต</span>
+                    <span style="color:#eab308">△ อนาคต</span>
+                    <span style="color:#16a34a">□ รหัสชีวิต</span>
+                </div>`);
+
+        return parts.join('');
+    }
+
+    /* ================================================================
+     *  SECTION 9.5: BINGO LINE COUNT VISUALIZATION
+     * ================================================================ */
+
+    /**
+     * Compute how many "lines" each bingo connection is worth.
+     * Line count = min(weighted circles) across all digits in the line.
+     * Weighted circles = dob*1 + future*3 + life*5.
+     *
+     * @param {object} digitData - Output of countDigitsByType()
+     * @returns {Array<{ digits: number[], points: number[][], lineCount: number }>}
+     */
+    function computeBingoLineCounts(digitData) {
+        const { dob, future, life, total } = digitData;
+        return BINGO_LINES.map(line => {
+            const allPresent = line.digits.every(d => total[d] > 0);
+            let lineCount = 0;
+            if (allPresent) {
+                const circleCounts = line.digits.map(d => (dob[d] * 1) + (future[d] * 3) + (life[d] * 5));
+                lineCount = Math.min(...circleCounts);
+            }
+            return { digits: line.digits, points: line.points, lineCount };
+        });
+    }
+
+    /**
+     * Generate an HTML table listing each active bingo line with its count.
+     * Sorted by count descending. Only Line and Count columns.
+     *
+     * @param {object} digitData - Output of countDigitsByType()
+     * @param {string} textColorClass - Tailwind text color class
+     * @returns {string} HTML string
+     */
+    function generateBingoSummary(digitData, strokeColor, textColorClass) {
+        const lineCounts = computeBingoLineCounts(digitData)
+            .filter(l => l.lineCount > 0)
+            .sort((a, b) => b.lineCount - a.lineCount);
+
+        if (lineCounts.length === 0) {
+            return '<p class="text-xs text-gray-400 text-center py-2">No bingo lines</p>';
+        }
+
+        let html = '<table class="w-full text-xs border-collapse">';
+        html += `<thead><tr class="border-b border-gray-200">
+            <th class="py-1 px-2 text-left text-gray-500 font-bold">Line</th>
+            <th class="py-1 px-2 text-center text-gray-500 font-bold">Count</th>
+        </tr></thead><tbody>`;
+
+        for (const entry of lineCounts) {
+            html += `<tr class="border-b border-gray-100">
+                <td class="py-1 px-2 font-medium text-gray-700">${entry.digits.join('-')}</td>
+                <td class="py-1 px-2 text-center font-bold ${textColorClass}">${entry.lineCount}</td>
+            </tr>`;
+        }
+
+        html += '</tbody></table>';
+        return html;
+    }
+
+    /**
+     * Positions for the 9 nodes on the triangle diagram.
+     * Each node has: display position (x, y), result text position (rx, ry1, ry2),
+     * and text-anchor alignment (a).
+     */
+    const TRIANGLE_POSITIONS = {
+        1: { x: 45,  y: 320, rx: 45,  ry1: 345, ry2: 361, a: 'middle' },
+        2: { x: 60,  y: 233, rx: 40,  ry1: 225, ry2: 241, a: 'end' },
+        3: { x: 95,  y: 148, rx: 75,  ry1: 140, ry2: 156, a: 'end' },
+        4: { x: 200, y: 40,  rx: 200, ry1: 0,   ry2: 20,  a: 'middle' },
+        5: { x: 305, y: 148, rx: 340, ry1: 140, ry2: 156, a: 'start' },
+        6: { x: 340, y: 233, rx: 375, ry1: 225, ry2: 241, a: 'start' },
+        7: { x: 340, y: 320, rx: 340, ry1: 345, ry2: 361, a: 'middle' },
+        8: { x: 247, y: 320, rx: 247, ry1: 345, ry2: 361, a: 'middle' },
+        9: { x: 153, y: 320, rx: 153, ry1: 345, ry2: 361, a: 'middle' }
+    };
+
+    /**
+     * Generate the prediction triangle as an SVG string.
+     *
+     * @param {number[]} sequence    - 9-number sequence from createSequence()
+     * @param {Array}    yearResults - Output of calculateYearResults()
+     * @param {string}   fillColor   - Triangle fill color (hex)
+     * @param {string}   strokeColor - Triangle stroke color (hex)
+     * @param {string}   resultColor - Default result text color (hex)
+     * @returns {string} SVG string
+     */
+    function generateTriangleSVG(sequence, yearResults, fillColor, strokeColor, resultColor) {
+        const parts = [`<svg xmlns="http://www.w3.org/2000/svg" class="triangle-svg" viewBox="-30 -20 580 470">
+            <polygon points="200,50 60,292 340,292" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2" stroke-linejoin="round"/>`];
+
+        for (let i = 1; i <= 9; i++) {
+            const digit = sequence[i - 1];
+            const pos   = TRIANGLE_POSITIONS[i];
+            const yearData = yearResults.find(r => r.lastDigit === digit);
+
+            const fontSize = (i === 1 || i === 4 || i === 7) ? 24 : 20;
+            const adjustedY = (i === 4) ? pos.y : pos.y + 7;
+            parts.push(`<text x="${pos.x}" y="${adjustedY}" text-anchor="${pos.a}" font-size="${fontSize}" font-weight="bold" fill="#1f2937">${digit}</text>`);
+
+            if (yearData) {
+                const isCurrent = yearData.isCurrent;
+                const color     = isCurrent ? '#16a34a' : resultColor;
+                const fontWeight = isCurrent ? 'bold' : 'normal';
+
+                if (isCurrent) {
+                    let boxX = pos.rx;
+                    if (pos.a === 'middle')     boxX = pos.rx - 30;
+                    else if (pos.a === 'start') boxX = pos.rx - 5;
+                    else if (pos.a === 'end')   boxX = pos.rx - 55;
+
+                    parts.push(`<rect x="${boxX}" y="${pos.ry1 - 15}" width="60" height="35" fill="#fef9c3" stroke="#16a34a" stroke-width="2" stroke-dasharray="4 2" rx="4" />`);
+                }
+
+                parts.push(`<text x="${pos.rx}" y="${pos.ry1}" text-anchor="${pos.a}" font-size="14" font-weight="${fontWeight}" fill="${color}">${yearData.result}</text>`);
+
+                const yearColor = isCurrent ? '#16a34a' : '#9ca3af';
+                parts.push(`<text x="${pos.rx}" y="${pos.ry2}" text-anchor="${pos.a}" font-size="12" font-weight="${fontWeight}" fill="${yearColor}">(${yearData.year})</text>`);
+            }
+        }
+
+        parts.push('</svg>');
+        return parts.join('');
+    }
+
+    /**
+     * Generate the small summary box below the triangle showing the current year's prediction.
+     *
+     * @param {Array}  yearResults - Output of calculateYearResults()
+     * @param {number} currentYear
+     * @param {string} bgClass     - Tailwind background class
+     * @param {string} textClass   - Tailwind text color class
+     * @param {string} borderClass - Tailwind border class
+     * @returns {string} HTML string
+     */
+    function generateTriangleResultSummary(yearResults, currentYear, bgClass, textClass, borderClass) {
+        const current = yearResults.find(r => r.isCurrent);
+        if (!current) return '';
+
+        return `<div class="${bgClass} border-2 ${borderClass} rounded-lg p-2 text-center w-full">
+                    <p class="text-xs text-gray-600">Prediction ${currentYear}</p>
+                    <p class="text-lg font-bold ${textClass}">${current.result}</p>
+                </div>`;
+    }
+
+
+    /* ================================================================
+     *  SECTION 12: TABLE GENERATOR
+     * ================================================================ */
+
+    /**
+     * Generate the breakdown table (Year → Month → Date → Hour → Mins)
+     * showing raw values in the first row and calculated results in the second.
+     *
+     * @param {number} year
+     * @param {number} month
+     * @param {number} day
+     * @param {number} hour
+     * @param {number} mins
+     * @param {object} code        - Output of calculateCode()
+     * @param {string} borderClass - Tailwind border class
+     * @param {string} bgClass     - Tailwind background class for header
+     * @param {string} textClass   - Tailwind text color class for results
+     * @returns {string} HTML table string
+     */
+    function generateTable(year, month, day, hour, mins, code, borderClass, bgClass, textClass) {
+        return `
+            <thead>
+                <tr class="${bgClass}">
+                    <th class="table-cell border ${borderClass} px-1 sm:px-2 py-1 text-gray-600">Year</th>
+                    <th class="table-cell border ${borderClass} px-1 sm:px-2 py-1 text-gray-600">Month</th>
+                    <th class="table-cell border ${borderClass} px-1 sm:px-2 py-1 text-gray-600">Date</th>
+                    <th class="table-cell border ${borderClass} px-1 sm:px-2 py-1 text-gray-600">Hour</th>
+                    <th class="table-cell border ${borderClass} px-1 sm:px-2 py-1 text-gray-600">Mins</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${year}</td>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${pad2(month)}</td>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${pad2(day)}</td>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${pad2(hour)}</td>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${pad2(mins)}</td>
+                </tr>
+                <tr class="font-bold ${textClass}">
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${code.yearResult}</td>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${code.monthResult}</td>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${code.dateResult}</td>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${code.hourResult}</td>
+                    <td class="table-cell border ${borderClass} px-1 sm:px-2 py-1">${code.minsResult}</td>
+                </tr>
+            </tbody>`;
+    }
+
+
+    /* ================================================================
+     *  SECTION 13: UTILITIES
+     * ================================================================ */
+
+    /**
+     * Show a toast notification using Toastify.js (falls back to console.log).
+     * @param {string} msg   - Message to display
+     * @param {string} color - "green" (default) or "red"
+     */
+    function safeToast(msg, color = "green") {
+        if (typeof Toastify !== 'undefined') {
+            Toastify({
+                text: msg,
+                duration: 3000,
+                style: {
+                    background: color === "red" ? "#ef4444" : "#10b981",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                },
+                gravity: "top",
+                position: "center"
+            }).showToast();
+        } else {
+            console.log(msg);
+        }
+    }
+
+    /**
+     * Detect the user's device type from the user agent string.
+     * @returns {string} Device description with emoji
+     */
+    function getDeviceType() {
+        const ua = navigator.userAgent;
+        if (/Android/i.test(ua))        return "📱 Android";
+        if (/iPhone|iPad|iPod/i.test(ua)) return "📱 iOS (iPhone/iPad)";
+        if (/Windows/i.test(ua))        return "💻 Windows PC";
+        if (/Mac/i.test(ua))            return "💻 Mac";
+        if (/Linux/i.test(ua))          return "🐧 Linux";
+        return "❓ Other Device";
+    }
+
+    /**
+     * Submit a click tracking event to Netlify forms.
+     * @param {string} name - Client name entered in the form
+     */
+    function trackClick(name) {
+        const formData = new FormData();
+        formData.append('form-name', 'click_tracking');
+        formData.append('client_name', name || 'Anonymous');
+        formData.append('action_time', new Date().toLocaleString('th-TH'));
+        formData.append('device_info', getDeviceType());
+
+        fetch('/', {
+            method: 'POST',
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams(formData).toString()
+        }).catch(error => console.log('Tracking Error:', error));
+    }
+
+    </script>
+</body>
+</html>
