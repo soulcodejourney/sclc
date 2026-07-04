@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Soul Code Calculator</title>
 
     <!-- ===================== EXTERNAL LIBRARIES ===================== -->
@@ -24,7 +24,18 @@
             .part-title  { font-size: 0.75rem !important; }
             .summary-text { font-size: 1.25rem !important; }
             .table-cell  { padding: 0.25rem !important; font-size: 0.7rem !important; }
+
+            /* iOS Safari auto-zooms on focus when input font < 16px — force 16px */
+            input, select, textarea { font-size: 16px !important; }
         }
+
+        /* --- iPhone safe areas (Dynamic Island / home indicator) --- */
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+        }
+        .header-bg { padding-top: calc(1rem + env(safe-area-inset-top)); }
 
         /* --- Small tablet (640px – 767px) --- */
         @media (min-width: 640px) and (max-width: 767px) {
@@ -70,8 +81,8 @@
 
     <!-- ==================== HEADER WITH AUTH ==================== -->
     <div class="header-bg text-white p-4 shadow-lg mb-6">
-        <div class="container-main max-w-4xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl sm:text-2xl font-bold">Soul Code Calculator</h1>
+        <div class="container-main max-w-4xl mx-auto flex flex-wrap justify-between items-center gap-2">
+            <h1 class="text-lg sm:text-2xl font-bold">Soul Code Calculator</h1>
 
             <div id="authArea" class="flex items-center gap-2">
 
@@ -121,13 +132,40 @@
                        placeholder="Enter Name">
             </div>
 
-            <!-- DOB / Time / Predict Year row -->
-            <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Date of Birth</label>
-                    <input type="date" id="dob"
-                           class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+            <!-- DOB row: separate Day / Month / Year -->
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Date of Birth (วัน / เดือน / ปีเกิด)</label>
+                <div class="grid grid-cols-3 gap-2 sm:gap-4">
+                    <div>
+                        <label for="dobDay" class="block text-[10px] font-semibold text-gray-400 mb-0.5">Day (วัน)</label>
+                        <input type="number" id="dobDay" min="1" max="31" inputmode="numeric" placeholder="DD"
+                               class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="dobMonth" class="block text-[10px] font-semibold text-gray-400 mb-0.5">Month (01–12)</label>
+                        <input type="text" id="dobMonth" inputmode="numeric" maxlength="2" placeholder="MM"
+                               class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                               oninput="validateMonthInput()" onblur="validateMonthInput(true)">
+                    </div>
+                    <div>
+                        <label for="dobYear" class="block text-[10px] font-semibold text-gray-400 mb-0.5">Year (ปี)</label>
+                        <input type="number" id="dobYear" inputmode="numeric" placeholder="YYYY"
+                               class="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                               oninput="updateBEHint()">
+                    </div>
                 </div>
+                <!-- B.E. checkbox: year entered is Buddhist Era, converted to CE automatically -->
+                <div class="flex flex-wrap items-center gap-2 mt-2">
+                    <input type="checkbox" id="dobIsBE" class="w-4 h-4 accent-purple-600" onchange="updateBEHint()">
+                    <label for="dobIsBE" class="text-xs text-gray-600 font-semibold cursor-pointer">
+                        ปีเกิดเป็น พ.ศ. (Buddhist Era)
+                    </label>
+                    <span id="beHint" class="text-xs font-bold text-amber-600"></span>
+                </div>
+            </div>
+
+            <!-- Time / Predict Year row -->
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Time</label>
                     <input type="time" id="birthTime" value="00:00"
@@ -147,12 +185,12 @@
                     🧮 SCLC Code
                 </button>
                 <button type="button" onclick="resetAll()"
-                        class="py-3 px-4 bg-gray-400 text-white font-bold rounded-lg hover:bg-gray-500 transition shadow-md text-sm sm:text-base"
+                        class="py-3 px-3 sm:px-4 bg-gray-400 text-white font-bold rounded-lg hover:bg-gray-500 transition shadow-md text-sm sm:text-base"
                         title="Reset All">
                     🔄 Reset
                 </button>
                 <button type="button" onclick="showModal('beConverterModal')"
-                        class="py-3 px-4 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 transition shadow-md text-sm sm:text-base"
+                        class="py-3 px-3 sm:px-4 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 transition shadow-md text-sm sm:text-base"
                         title="Buddhist Era Converter">
                     📅 BE↔CE
                 </button>
@@ -609,7 +647,7 @@
         document.getElementById('ceYear').value = be ? parseInt(be) - 543 : '';
     }
 
-    /** Apply the CE year value into the DOB input field */
+    /** Apply the CE year value into the DOB Year field */
     function useCEYear() {
         const ce = document.getElementById('ceYear').value;
         if (!ce) {
@@ -617,21 +655,100 @@
             return;
         }
 
-        const dobEl = document.getElementById('dob');
-        const currentVal = dobEl.value;
-
-        if (currentVal) {
-            // Replace just the year portion of the existing date
-            const parts = currentVal.split('-');
-            parts[0] = ce;
-            dobEl.value = parts.join('-');
-        } else {
-            // No date set yet — default to Jan 1 of that year
-            dobEl.value = ce + '-01-01';
-        }
+        document.getElementById('dobYear').value = ce;
+        document.getElementById('dobIsBE').checked = false; // value applied is already CE
+        updateBEHint();
 
         hideModal('beConverterModal');
         safeToast('✅ Year ' + ce + ' (CE) applied to DOB');
+    }
+
+    /**
+     * Live hint next to the B.E. checkbox showing the year in the other era,
+     * so the user can verify which calendar they entered.
+     */
+    function updateBEHint() {
+        const hint = document.getElementById('beHint');
+        const year = parseInt(document.getElementById('dobYear').value);
+        const isBE = document.getElementById('dobIsBE').checked;
+
+        if (isNaN(year)) {
+            hint.textContent = '';
+            return;
+        }
+        hint.textContent = isBE ? ('= ค.ศ. ' + (year - 543)) : ('= พ.ศ. ' + (year + 543));
+    }
+
+    /**
+     * Validate the Month text box (must be 01–12).
+     * Pops up a hint toast and marks the box red when the value is invalid.
+     * While typing, a lone "0" is tolerated (user may be about to type "09");
+     * on blur (final = true) any invalid value triggers the hint.
+     *
+     * @param {boolean} final - true when called on blur (strict check)
+     * @returns {boolean} true if the current value is valid (or empty)
+     */
+    function validateMonthInput(final = false) {
+        const el = document.getElementById('dobMonth');
+        const v  = el.value.trim();
+        const m  = parseInt(v);
+
+        const invalid = v !== '' && (!/^\d{1,2}$/.test(v) || m < 1 || m > 12);
+        // Only pop the hint once the value can no longer become valid,
+        // or on blur — avoids nagging after every keystroke.
+        const shouldWarn = invalid && (final || v.length >= 2 || m > 12);
+
+        if (shouldWarn) {
+            el.classList.add('border-red-500', 'bg-red-50');
+            safeToast('❌ Month must be 01–12 (เช่น 01 = ม.ค., 06 = มิ.ย., 12 = ธ.ค.)', 'red');
+        } else if (!invalid) {
+            el.classList.remove('border-red-500', 'bg-red-50');
+        }
+        return !invalid;
+    }
+
+    /**
+     * Read and validate the Day / Month / Year inputs.
+     * Handles Buddhist Era: converts to CE when the B.E. checkbox is ticked,
+     * and auto-converts when an unchecked year is clearly พ.ศ. (in the future).
+     *
+     * @returns {{ year:number, month:number, day:number, iso:string } | { error:string }}
+     *          year is always Gregorian (CE); iso is "yyyy-mm-dd" for storage/display.
+     */
+    function getDobInput() {
+        const day   = parseInt(document.getElementById('dobDay').value);
+        const month = parseInt(document.getElementById('dobMonth').value);
+        let   year  = parseInt(document.getElementById('dobYear').value);
+        const isBE  = document.getElementById('dobIsBE').checked;
+
+        if (isNaN(day) || isNaN(month) || isNaN(year)) {
+            return { error: 'Please fill in Day, Month and Year of birth' };
+        }
+
+        if (month < 1 || month > 12) {
+            return { error: 'Month must be 01–12 (เช่น 01 = ม.ค., 06 = มิ.ย., 12 = ธ.ค.)' };
+        }
+
+        if (isBE) year -= 543;
+
+        // Safety net: unchecked but the year is in the future → must be พ.ศ.
+        const thisYear = new Date().getFullYear();
+        if (!isBE && year > thisYear) {
+            year -= 543;
+            safeToast('ℹ️ Year looks like พ.ศ. — auto-converted to ค.ศ. ' + year);
+        }
+
+        if (year < 1400 || year > thisYear) {
+            return { error: 'Invalid birth year' };
+        }
+
+        // Reject impossible dates like 31 Feb (Date would roll them over)
+        const d = new Date(year, month - 1, day);
+        if (d.getDate() !== day || d.getMonth() !== month - 1) {
+            return { error: 'Invalid date — that day does not exist in the selected month' };
+        }
+
+        return { year, month, day, iso: year + '-' + pad2(month) + '-' + pad2(day) };
     }
 
 
@@ -650,15 +767,16 @@
         }
 
         const clientName = document.getElementById('clientName').value;
-        const dobInput   = document.getElementById('dob').value;
         const timeInput  = document.getElementById('birthTime').value;
         const currentYear = document.getElementById('currentYear').value;
         const notes      = document.getElementById('profileNotes').value;
 
-        if (!dobInput) {
+        const dobData = getDobInput();
+        if (dobData.error) {
             safeToast('❌ Please calculate first', 'red');
             return;
         }
+        const dobInput = dobData.iso; // always stored as CE yyyy-mm-dd
 
         // Capture all displayed result HTML for later restoration
         const soulResult = captureResultHTML('soul');
@@ -761,9 +879,15 @@
             return;
         }
 
-        // Fill form inputs with saved data
+        // Fill form inputs with saved data (stored dob is always CE yyyy-mm-dd)
+        const [by, bm, bd] = String(data.dob).split('-').map(Number);
         document.getElementById('clientName').value   = data.client_name;
-        document.getElementById('dob').value          = data.dob;
+        document.getElementById('dobDay').value       = bd;
+        document.getElementById('dobMonth').value     = pad2(bm);
+        document.getElementById('dobYear').value      = by;
+        document.getElementById('dobIsBE').checked    = false;
+        validateMonthInput();
+        updateBEHint();
         document.getElementById('birthTime').value    = data.birth_time;
         document.getElementById('currentYear').value  = data.predict_year;
         document.getElementById('profileNotes').value = data.notes || '';
@@ -772,7 +896,6 @@
         // Restore previously saved result HTML directly into the DOM
         if (data.soul_result && data.life_result) {
             document.getElementById('displayName').textContent    = data.client_name;
-            const [by, bm, bd] = String(data.dob).split('-').map(Number);
             document.getElementById('displayDetails').innerHTML = `DOB: ${data.dob} | Time: ${data.birth_time} | Prediction Year: ${data.predict_year}` +
                 ageBadgesHTML(by, bm, bd, parseInt(data.predict_year));
 
@@ -955,20 +1078,21 @@
     function calculate() {
         try {
             const clientName  = document.getElementById('clientName').value;
-            const dobInput    = document.getElementById('dob').value;
             const timeInput   = document.getElementById('birthTime').value;
             const currentYear = parseInt(document.getElementById('currentYear').value);
 
-            if (!dobInput) {
-                safeToast('❌ Please select a Date of Birth', "red");
+            // Read Day / Month / Year inputs (handles B.E. → C.E. conversion)
+            const dob = getDobInput();
+            if (dob.error) {
+                safeToast('❌ ' + dob.error, "red");
                 return;
             }
+            const { year, month, day } = dob;
+            const dobInput = dob.iso;
 
             trackClick(clientName);
             editingProfileId = null; // New calculation = new profile
 
-            // Parse date and time
-            const [year, month, day] = dobInput.split('-').map(Number);
             const [hour, mins] = timeInput ? timeInput.split(':').map(Number) : [0, 0];
 
             // --- Convert Gregorian to Lunar date for the Life Code ---
@@ -1032,7 +1156,12 @@
      */
     function resetAll() {
         document.getElementById('clientName').value   = '';
-        document.getElementById('dob').value          = '';
+        document.getElementById('dobDay').value       = '';
+        document.getElementById('dobMonth').value     = '';
+        document.getElementById('dobYear').value      = '';
+        document.getElementById('dobIsBE').checked    = false;
+        document.getElementById('beHint').textContent = '';
+        validateMonthInput(); // clears any red invalid highlight
         document.getElementById('birthTime').value    = '00:00';
         document.getElementById('currentYear').value  = new Date().getFullYear();
         document.getElementById('profileNotes').value = '';
