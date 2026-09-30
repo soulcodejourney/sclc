@@ -141,21 +141,26 @@
         const input = document.getElementById('dobInput').value;
         if (!input) return alert("Please select a valid date.");
 
+        // Guard: lunar library comes from CDN — needed for the Action row
+        if (typeof Solar === 'undefined') {
+            return alert("Lunar library not loaded — please check your internet connection and reload.");
+        }
+
         const output = document.getElementById('outputArea');
         output.innerHTML = "";
 
-        const date = new Date(input);
-        const gDay = date.getDate();
-        const gMonth = date.getMonth() + 1;
-        const gYear = date.getFullYear();
+        // Parse the yyyy-mm-dd string directly (new Date() would parse it as UTC
+        // and can shift the date by one day in timezones west of GMT)
+        const [gYear, gMonth, gDay] = input.split('-').map(Number);
 
         // Base Calculations
         const gregBaseSum = sumDigits(gDay) + sumDigits(gMonth);
         const lunarObj = Solar.fromYmd(gYear, gMonth, gDay).getLunar();
-        const lunarBaseSum = sumDigits(lunarObj.getDay()) + sumDigits(lunarObj.getMonth());
+        // Math.abs: lunar-javascript returns NEGATIVE month/day for leap months
+        const lunarBaseSum = sumDigits(Math.abs(lunarObj.getDay())) + sumDigits(Math.abs(lunarObj.getMonth()));
 
-        // Loop from Age 0 to 99 in jumps of 9
-        for (let startAge = 0; startAge <= 98; startAge += 9) {
+        // Loop from Age 0 to 99 in jumps of 9 (last block shows age 99, rest blank)
+        for (let startAge = 0; startAge <= 99; startAge += 9) {
             
             // Start Table
             let html = `<div class="cycle-block"><table>`;
