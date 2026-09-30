@@ -1591,16 +1591,18 @@
      * ================================================================ */
 
     /**
-     * Count how many times each digit (0–9) appears across three categories:
-     *   - dob (past / อดีต)      — from the ddmmyyyy string
-     *   - future (อนาคต)        — from the first (upper) number in dateResult
-     *   - life (รหัสชีวิต)       — the final single digit of dateResult
+     * Count how many times each digit (0–9) appears in each category:
+     *   - dob    (○ past / อดีต, ×1)           — the 8 digits of ddmmyyyy
+     *   - root   (◌ dashed circle / รากเหง้า)  — the TOP tier of a 3-tier code only (28/10/1 → 2,8).
+     *                                            DRAWN ONLY: not in total, counts, line strength or line activation.
+     *   - future (△ talent / อนาคต, ×3)       — the intermediate sum = second-to-last part (31/4 → 3,1; 28/10/1 → 1,0)
+     *   - life   (□ life code / รหัสชีวิต, ×5) — the final single digit of dateResult
      *
      * @param {number} year
      * @param {number} month
      * @param {number} day
-     * @param {string} dateResult - e.g. "34/7"
-     * @returns {{ dob: object, future: object, life: object, total: object }}
+     * @param {string} dateResult - e.g. "34/7" or "28/10/1"
+     * @returns {{ dob: object, root: object, future: object, life: object, total: object }}
      */
     function countDigitsByType(year, month, day, dateResult) {
         // DOB digits from ddmmyyyy
@@ -1608,11 +1610,16 @@
         const dob = initDigitCounts();
         for (const ch of dobStr) dob[parseInt(ch)]++;
 
-        // Future digits: first (upper) part of the "/" separated result
         const parts = dateResult.split('/');
         const lifeDigit = parseInt(parts[parts.length - 1]);
-        const futureStr = parts.length >= 2 ? parts[0] : '';
 
+        // Root nature (◌): the top tier of a 3-tier code — drawn as a dashed circle only, never counted
+        const rootStr = parts.length === 3 ? parts[0] : '';
+        const root = initDigitCounts();
+        for (const ch of rootStr) root[parseInt(ch)]++;
+
+        // Future digits (△ talent): the intermediate sum = second-to-last part
+        const futureStr = parts.length >= 2 ? parts[parts.length - 2] : '';
         const future = initDigitCounts();
         for (const ch of futureStr) future[parseInt(ch)]++;
 
@@ -1620,13 +1627,13 @@
         const life = initDigitCounts();
         life[lifeDigit]++;
 
-        // Total: sum of all three
+        // Total: counted marks only (○ △ □) — the ◌ root circle is display-only
         const total = initDigitCounts();
         for (let i = 0; i <= 9; i++) {
             total[i] = dob[i] + future[i] + life[i];
         }
 
-        return { dob, future, life, total };
+        return { dob, root, future, life, total };
     }
 
     /**
@@ -1638,8 +1645,6 @@
      * @returns {string} HTML string
      */
     function generateCountSummary(digitData, textColorClass) {
-        const { dob, future, life, total } = digitData;
-
         // Left column: 1–5, Right column: 6–9, 0
         const leftDigits  = [1, 2, 3, 4, 5];
         const rightDigits = [6, 7, 8, 9, 0];
@@ -1647,8 +1652,8 @@
         let html = '<div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">';
 
         for (let i = 0; i < 5; i++) {
-            html += formatCountItem(leftDigits[i],  dob, future, life, total, textColorClass);
-            html += formatCountItem(rightDigits[i], dob, future, life, total, textColorClass);
+            html += formatCountItem(leftDigits[i],  digitData, textColorClass);
+            html += formatCountItem(rightDigits[i], digitData, textColorClass);
         }
 
         return html + '</div>';
@@ -1656,17 +1661,15 @@
 
     /**
      * Format a single digit's count as a small HTML snippet with shape indicators.
-     *   ○ = DOB (past)    △ = Future    □ = Life
+     *   ○ = DOB (past)   △ = Future   □ = Life   (◌ root circles are drawn in the grid but never counted)
      *
      * @param {number} key - Digit 0–9
-     * @param {object} dob
-     * @param {object} future
-     * @param {object} life
-     * @param {object} total
+     * @param {object} digitData - Output of countDigitsByType()
      * @param {string} textColorClass
      * @returns {string} HTML string
      */
-    function formatCountItem(key, dob, future, life, total, textColorClass) {
+    function formatCountItem(key, digitData, textColorClass) {
+        const { dob, future, life, total } = digitData;
         let shapes = '';
 
         if (dob[key] > 0) {
@@ -1768,36 +1771,39 @@
 
     /**
      * Lay out the rings for one bingo cell so they always fit inside it (cell half-width = 40).
-     * Draws at most MAX_RINGS rings: triangles (future) first, then circles (past).
+     * Draws at most MAX_RINGS rings: triangles (future) first, then dashed root circles, then circles (past).
      * Ring spacing shrinks when crowded, and the life-code square grows so it stays outermost.
      * Exact counts are still listed beside the grid — this only affects the drawing.
      *
      * @param {number}  dobN    - past (DOB) count for this digit
      * @param {number}  futureN - future count for this digit
      * @param {boolean} hasLife - whether this digit is the life code (square)
-     * @returns {{ circles: number, triangles: number, radii: number[], squareHalf: number }}
+     * @param {number}  rootN   - root-nature (top tier of a 3-tier code) count for this digit
+     * @returns {{ circles: number, roots: number, triangles: number, radii: number[], squareHalf: number }}
      */
     const BASE_RADIUS = 13;
     const SHAPE_STEP  = 6;
     const MAX_RINGS   = 5;
     const SQUARE_HALF = 34 * 0.75;
 
-    function layoutCellShapes(dobN, futureN, hasLife) {
+    function layoutCellShapes(dobN, futureN, hasLife, rootN = 0) {
         const triangles = Math.min(futureN, MAX_RINGS);
-        const circles   = Math.min(dobN, MAX_RINGS - triangles);
-        const count     = circles + triangles;
+        const roots     = Math.min(rootN, MAX_RINGS - triangles);
+        const circles   = Math.min(dobN, MAX_RINGS - triangles - roots);
+        const count     = circles + roots + triangles;
         const maxOuter  = hasLife ? 30 : 34;
         const step      = count > 1 ? Math.min(SHAPE_STEP, (maxOuter - BASE_RADIUS) / (count - 1)) : 0;
         const radii     = Array.from({ length: count }, (_, i) => BASE_RADIUS + i * step);
         const outer     = count ? radii[count - 1] : 0;
         const squareHalf = hasLife ? Math.min(36, Math.max(SQUARE_HALF, outer + 4)) : 0;
-        return { circles, triangles, radii, squareHalf };
+        return { circles, roots, triangles, radii, squareHalf };
     }
 
     /**
      * All 12 possible "bingo lines" connecting digits.
-     * Each line specifies which digits must all be present (total > 0)
-     * for the line to be drawn.
+     * Each line specifies which digits must all be ACTIVE for the line to be drawn.
+     * A digit is active when it has a solid mark (○ past, △ talent or □ life code);
+     * a digit whose only mark is a ◌ dashed root circle does NOT activate a line.
      */
     const BINGO_LINES = [
         // Columns
@@ -1818,6 +1824,11 @@
         { digits: [6, 8],    points: [[130, 210],[210, 130]] }
     ];
 
+    /** True when digit d has a counted mark (○ △ □). A ◌ root circle is display-only and never activates a line. */
+    function isLineActive(digitData, d) {
+        return digitData.total[d] > 0;
+    }
+
     /**
      * Generate the bingo matrix as an SVG string.
      *
@@ -1826,7 +1837,7 @@
      * @returns {string} SVG + legend HTML
      */
     function generateMatrixSVG(digitData, strokeColor) {
-        const { dob, future, life, total } = digitData;
+        const { dob, root, future, life, total } = digitData;
         const parts = [];
 
         // Start SVG with background grid
@@ -1837,23 +1848,24 @@
             <line x1="10"  y1="90"  x2="250" y2="90"  stroke="#e5e7eb"/>
             <line x1="10"  y1="170" x2="250" y2="170" stroke="#e5e7eb"/>`);
 
-        // Draw bingo lines where all connected digits are present
+        // Draw bingo lines where all connected digits are active (a ◌ root circle alone doesn't count)
         for (const line of BINGO_LINES) {
-            if (line.digits.every(digit => total[digit] > 0)) {
+            if (line.digits.every(digit => isLineActive(digitData, digit))) {
                 parts.push(`<line x1="${line.points[0][0]}" y1="${line.points[0][1]}" x2="${line.points[1][0]}" y2="${line.points[1][1]}" stroke="#374151" stroke-width="3" stroke-linecap="round"/>`);
             }
         }
 
-        // Draw shapes per digit: ○ DOB circles, △ Future triangles, □ Life squares
-        // Weighting: DOB ×1, Future ×3, Life ×5
+        // Draw shapes per digit: ○ DOB circles, ◌ dashed root circles, △ Future triangles, □ Life squares
+        // Weighting: DOB ×1, Future ×3, Life ×5 — ◌ root circles are drawn but never counted
         for (let key = 0; key <= 9; key++) {
             const pos = MATRIX_POSITIONS[key];
 
-            if (total[key] > 0) {
+            if (total[key] > 0 || root[key] > 0) {
                 // Fit every ring inside the cell (max 5; square stays outermost)
-                const layout = layoutCellShapes(dob[key], future[key], life[key] > 0);
+                const layout = layoutCellShapes(dob[key], future[key], life[key] > 0, root[key]);
                 const innerShapes = [];
                 for (let i = 0; i < layout.circles; i++)   innerShapes.push({ type: 'circle',   color: strokeColor });
+                for (let i = 0; i < layout.roots; i++)     innerShapes.push({ type: 'circle',   color: strokeColor, dashed: true });
                 for (let i = 0; i < layout.triangles; i++) innerShapes.push({ type: 'triangle', color: '#eab308' });
 
                 // Draw square first (always outermost) if life digit present
@@ -1870,7 +1882,8 @@
                         const r = radii[innerShapes.length - 1 - i];
                         const s = innerShapes[i];
                         if (s.type === 'circle') {
-                            parts.push(`<circle cx="${pos.x}" cy="${pos.y}" r="${r}" fill="none" stroke="${s.color}" stroke-width="2"/>`);
+                            const dash = s.dashed ? ' stroke-dasharray="4 3"' : '';
+                            parts.push(`<circle cx="${pos.x}" cy="${pos.y}" r="${r}" fill="none" stroke="${s.color}" stroke-width="2"${dash}/>`);
                         } else {
                             const tx = pos.x;
                             const ty = pos.y - r;
@@ -1890,10 +1903,11 @@
         }
 
         parts.push('</svg>');
-        parts.push(`<div class="flex justify-center gap-3 mt-1 text-[10px]">
-                    <span class="text-gray-500">○ อดีต</span>
-                    <span style="color:#eab308">△ อนาคต</span>
-                    <span style="color:#16a34a">□ รหัสชีวิต</span>
+        parts.push(`<div class="flex flex-wrap justify-center gap-x-3 gap-y-0.5 mt-1 text-[10px]">
+                    <span class="text-gray-500 whitespace-nowrap">○ อดีต</span>
+                    <span class="text-gray-500 whitespace-nowrap">◌ รากเหง้า</span>
+                    <span class="whitespace-nowrap" style="color:#eab308">△ อนาคต</span>
+                    <span class="whitespace-nowrap" style="color:#16a34a">□ รหัสชีวิต</span>
                 </div>`);
 
         return parts.join('');
@@ -1906,15 +1920,15 @@
     /**
      * Compute how many "lines" each bingo connection is worth.
      * Line count = min(weighted circles) across all digits in the line.
-     * Weighted circles = dob*1 + future*3 + life*5.
+     * Weighted circles = dob*1 + future*3 + life*5 (◌ root circles are not counted).
      *
      * @param {object} digitData - Output of countDigitsByType()
      * @returns {Array<{ digits: number[], points: number[][], lineCount: number }>}
      */
     function computeBingoLineCounts(digitData) {
-        const { dob, future, life, total } = digitData;
+        const { dob, future, life } = digitData;
         return BINGO_LINES.map(line => {
-            const allPresent = line.digits.every(d => total[d] > 0);
+            const allPresent = line.digits.every(d => isLineActive(digitData, d));
             let lineCount = 0;
             if (allPresent) {
                 const circleCounts = line.digits.map(d => (dob[d] * 1) + (future[d] * 3) + (life[d] * 5));
